@@ -161,3 +161,46 @@ export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string)
     throw new Error("Failed to summarize the video content. Please try again.");
   }
 };
+
+// Function to analyze health reports (PDF, DOCX, etc.)
+export const analyzeHealthReport = async (file: File) => {
+  try {
+    // For PDFs and DOCXs, we'll extract text if possible or analyze as an image
+    const model = getGeminiVisionModel();
+    const imagePart = await fileToGenerativePart(file);
+    
+    const prompt = "Analyze this medical report. Provide a comprehensive summary including key findings, diagnoses, causes, recommended immediate care, treatment plans, and follow-up actions. Format the response with clear sections.";
+    
+    const result = await model.generateContent([prompt, imagePart]);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error analyzing health report:", error);
+    throw new Error("Failed to analyze the health report. Please try again.");
+  }
+};
+
+// Function to get medication recommendations based on symptoms
+export const getMedicationRecommendations = async (symptoms: string, allergies: string = "", currentMedications: string = "") => {
+  try {
+    const model = getGemini2Model();
+    const prompt = `Based on the following symptoms, suggest appropriate over-the-counter medications or treatments. Include warnings about when to see a doctor and potential drug interactions. Include a disclaimer about consulting healthcare professionals.\n\nSymptoms: ${symptoms}\nAllergies: ${allergies}\nCurrent Medications: ${currentMedications}`;
+    
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error getting medication recommendations:", error);
+    throw new Error("Failed to get medication recommendations. Please try again.");
+  }
+};
+
+// Function to get recommended videos based on recent activities
+export const getRecommendedVideos = async (recentActivities: string[]) => {
+  try {
+    // Join recent activities to create a search query
+    const searchQuery = recentActivities.join(", ");
+    return await searchYouTubeVideos(searchQuery);
+  } catch (error) {
+    console.error("Error getting recommended videos:", error);
+    throw new Error("Failed to get recommended videos. Please try again.");
+  }
+};
