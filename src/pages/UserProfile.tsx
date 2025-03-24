@@ -141,11 +141,13 @@ const UserProfile: React.FC = () => {
                       <RadioGroupItem value="male" id="gender-male">
                       <Label htmlFor="gender-male">Male</Label></RadioGroupItem>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="gender-female" />
-                      <Label htmlFor="gender-female">Female</Label></RadioGroupItem>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                   <RadioGroup>
+                <div className="flex items-center space-x-2">
+                <RadioGroupItem value="female" id="gender-female" />
+    <Label htmlFor="gender-female">Female</Label>
+  </div>
+</RadioGroup>
+ <div className="flex items-center space-x-2">
                       <RadioGroupItem value="other" id="gender-other" />
                       <Label htmlFor="gender-other">Other</Label>
                     </div>
@@ -154,13 +156,15 @@ const UserProfile: React.FC = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="height">Height</Label>
-                  <Input 
-                    id="height" 
-                    name="height" 
-                    placeholder="e.g., 5'10\" or 178 cm" 
-                    value={formData.height} 
-                    onChange={handleChange}
-                  />
+                 <input 
+              type="text"
+              id="height" 
+              name="height" 
+  placeholder={'e.g., 5\'10" or 178 cm'} 
+  value={formData.height} 
+  onChange={handleChange}
+/>
+
                 </div>
                 
                 <div className="space-y-2">
