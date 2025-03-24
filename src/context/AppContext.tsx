@@ -11,6 +11,8 @@ type UserData = {
   name?: string;
   age?: number;
   gender?: string;
+  height?: string;
+  weight?: string;
   medicalHistory?: string[];
   allergies?: string[];
   medications?: string[];
@@ -23,11 +25,12 @@ interface AppContextProps {
   updateUserData: (data: Partial<UserData>) => void;
   recentActivities: string[];
   addActivity: (activity: string) => void;
-  addRecentActivity: (activity: string) => void; // Added this method
+  addRecentActivity: (activity: string) => void;
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   encryptData: (data: any) => string;
   decryptData: (encryptedData: string) => any;
+  resetUserData: () => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -78,6 +81,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update user data function
   const updateUserData = (data: Partial<UserData>) => {
     setUserData((prevData) => ({ ...prevData, ...data }));
+  };
+
+  // Reset user data function
+  const resetUserData = () => {
+    setUserData({});
+    setRecentActivities([]);
+    localStorage.removeItem('userData');
+    localStorage.removeItem('recentActivities');
+    window.location.reload();
   };
 
   // Add activity function
@@ -142,6 +154,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSidebar,
         encryptData,
         decryptData,
+        resetUserData,
       }}
     >
       {children}

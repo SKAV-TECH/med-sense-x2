@@ -1,24 +1,33 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useApp } from '@/context/AppContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const { isSidebarOpen } = useApp();
+  const { isSidebarOpen, toggleSidebar } = useApp();
+  const isMobile = useIsMobile();
+  
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (isMobile && isSidebarOpen) {
+      toggleSidebar();
+    }
+  }, [isMobile]);
   
   const contentVariants = {
     expanded: { 
-      marginLeft: '240px',
+      marginLeft: isMobile ? '0px' : '240px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     },
     collapsed: { 
-      marginLeft: '72px',
+      marginLeft: isMobile ? '0px' : '72px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     }
   };
@@ -41,7 +50,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="container px-4 py-6 mx-auto"
+            className="container mx-auto px-4 py-6 md:px-6 lg:px-8"
           >
             {children}
           </motion.div>

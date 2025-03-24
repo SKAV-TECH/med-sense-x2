@@ -13,6 +13,8 @@ import TreatmentPlanner from "@/pages/TreatmentPlanner";
 import MedicationAnalyzer from "@/pages/MedicationAnalyzer";
 import VideoResources from "@/pages/VideoResources";
 import HealthReports from "@/pages/HealthReports";
+import UserProfile from "@/pages/UserProfile";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
 // Initialize the query client
@@ -61,12 +63,14 @@ const App = () => (
                 <HealthReports />
               </MainLayout>
             } />
+            <Route path="/profile" element={
+              <MainLayout>
+                <UserProfile />
+              </MainLayout>
+            } />
             <Route path="/settings" element={
               <MainLayout>
-                <div className="p-6">
-                  <h1 className="text-3xl font-bold mb-4">Settings</h1>
-                  <p>This feature is coming soon. Check back later for updates!</p>
-                </div>
+                <Settings />
               </MainLayout>
             } />
             <Route path="*" element={<NotFound />} />

@@ -26,6 +26,11 @@ export const fileToGenerativePart = async (file: File) => {
   });
 };
 
+// Get the preferred model from local storage or use default
+const getPreferredModel = () => {
+  return localStorage.getItem('aiModel') || 'gemini-2.0-flash';
+};
+
 // Get models using the specified Gemini models
 export const getGeminiProModel = () => {
   return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -43,10 +48,25 @@ export const getGeminiVisionModel = () => {
   return genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
 };
 
+// Function to get the appropriate model based on user settings
+const getModelBasedOnPreference = () => {
+  const preferredModel = getPreferredModel();
+  switch (preferredModel) {
+    case 'gemini-1.5-flash':
+      return getGeminiProModel();
+    case 'gemini-2.0-flash':
+      return getGemini2Model();
+    case 'gemini-2.0-flash-lite':
+      return getGemini2FlashModel();
+    default:
+      return getGemini2Model();
+  }
+};
+
 // Function to analyze medical images
 export const analyzeMedicalImage = async (file: File, promptText: string) => {
   try {
-    const model = getGemini2Model();
+    const model = getGemini2Model(); // Always use the vision model for images
     const imagePart = await fileToGenerativePart(file);
     
     const prompt = promptText || 
@@ -63,7 +83,7 @@ export const analyzeMedicalImage = async (file: File, promptText: string) => {
 // Function to ask health-related questions
 export const askHealthQuestion = async (question: string) => {
   try {
-    const model = getGemini2Model();
+    const model = getModelBasedOnPreference();
     const prompt = `As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice.\n\nQuestion: ${question}`;
     
     const result = await model.generateContent(prompt);
@@ -77,7 +97,7 @@ export const askHealthQuestion = async (question: string) => {
 // Function to generate personalized treatment plan
 export const generateTreatmentPlan = async (patientInfo: string, symptoms: string, medicalHistory: string) => {
   try {
-    const model = getGemini2Model();
+    const model = getModelBasedOnPreference();
     const prompt = `Based on the following patient information, generate a personalized treatment plan with recommendations for medications, lifestyle changes, and follow-up tests. Include a disclaimer about consulting healthcare professionals.\n\nPatient Information: ${patientInfo}\nSymptoms: ${symptoms}\nMedical History: ${medicalHistory}`;
     
     const result = await model.generateContent(prompt);
@@ -91,7 +111,7 @@ export const generateTreatmentPlan = async (patientInfo: string, symptoms: strin
 // Function to analyze medication safety
 export const analyzeMedication = async (medicationName: string, patientInfo?: string) => {
   try {
-    const model = getGemini2Model();
+    const model = getModelBasedOnPreference();
     const patientContext = patientInfo ? `\nPatient Information: ${patientInfo}` : '';
     
     const prompt = `Provide detailed information about this medication including uses, dosage, side effects, contraindications, and potential drug interactions. Format the response with clear sections.${patientContext}\n\nMedication: ${medicationName}`;
@@ -166,7 +186,7 @@ export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string)
 export const analyzeHealthReport = async (file: File) => {
   try {
     // For PDFs and DOCXs, we'll extract text if possible or analyze as an image
-    const model = getGeminiVisionModel();
+    const model = getGemini2Model(); // Use Gemini 2.0 Flash for health reports
     const imagePart = await fileToGenerativePart(file);
     
     const prompt = "Analyze this medical report. Provide a comprehensive summary including key findings, diagnoses, causes, recommended immediate care, treatment plans, and follow-up actions. Format the response with clear sections.";
@@ -182,7 +202,7 @@ export const analyzeHealthReport = async (file: File) => {
 // Function to get medication recommendations based on symptoms
 export const getMedicationRecommendations = async (symptoms: string, allergies: string = "", currentMedications: string = "") => {
   try {
-    const model = getGemini2Model();
+    const model = getModelBasedOnPreference();
     const prompt = `Based on the following symptoms, suggest appropriate over-the-counter medications or treatments. Include warnings about when to see a doctor and potential drug interactions. Include a disclaimer about consulting healthcare professionals.\n\nSymptoms: ${symptoms}\nAllergies: ${allergies}\nCurrent Medications: ${currentMedications}`;
     
     const result = await model.generateContent(prompt);
