@@ -138,12 +138,12 @@ const UserProfile: React.FC = () => {
                   <Label>Gender</Label>
                   <RadioGroup value={formData.gender} onValueChange={handleGenderChange} className="flex space-x-4">
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="gender-male" />
-                      <Label htmlFor="gender-male">Male</Label>
+                      <RadioGroupItem value="male" id="gender-male">
+                      <Label htmlFor="gender-male">Male</Label></RadioGroupItem>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="female" id="gender-female" />
-                      <Label htmlFor="gender-female">Female</Label>
+                      <Label htmlFor="gender-female">Female</Label></RadioGroupItem>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="other" id="gender-other" />
@@ -208,19 +208,20 @@ const UserProfile: React.FC = () => {
                 />
               </div>
               
-              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
-                {isSaved ? (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Profile
-                  </>
-                )}
-              </Button>
+             <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
+  {isSaved ? (
+    <>
+      <CheckCircle className="mr-2 h-4 w-4" />
+      Saved
+    </>
+  ) : (
+    <>
+      <Save className="mr-2 h-4 w-4" />
+      Save Profile
+    </>
+  )}
+</Button>
+
             </form>
           </CardContent>
         </Card>
