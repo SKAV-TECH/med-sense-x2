@@ -12,10 +12,14 @@ import ResultCard from '@/components/UI/ResultCard';
 import { analyzeMedicalImage } from '@/lib/api';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
+import { Badge } from '@/components/ui/badge';
 
 const ImageAnalysis: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [customPrompt, setCustomPrompt] = useState('');
+  const [customPrompt, setCustomPrompt] = useState(
+    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections."
+  );
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
@@ -69,36 +73,47 @@ const ImageAnalysis: React.FC = () => {
     document.body.removeChild(element);
   };
 
+  const predefinedPrompts = [
+    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections.",
+    "Provide a radiologist-style report for this medical image, including findings, impressions, and recommendations.",
+    "Analyze this medical image and explain the findings in simple terms that a patient would understand.",
+    "Identify any abnormalities in this medical image and provide differential diagnoses with probability scores."
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Medical Image Analysis</h1>
-        <p className="text-muted-foreground mt-2">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-lg text-white shadow-lg"
+      >
+        <h1 className="text-3xl font-bold mb-2">Medical Image Analysis</h1>
+        <p className="text-white/90 mt-2">
           Upload medical images for AI-powered analysis and disease detection
         </p>
-      </div>
+      </motion.div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-6">
-          <TabsTrigger value="upload">Upload Image</TabsTrigger>
-          <TabsTrigger value="results" disabled={!analysisResult}>
+        <TabsList className="grid grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
+          <TabsTrigger value="upload" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Upload Image</TabsTrigger>
+          <TabsTrigger value="results" disabled={!analysisResult} className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">
             Analysis Results
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="upload">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="overflow-hidden">
-              <CardHeader>
+            <Card className="overflow-hidden shadow-md border-0">
+              <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
                 <CardTitle className="flex items-center">
-                  <FileImage className="mr-2" size={20} />
+                  <FileImage className="mr-2 text-purple-500" size={20} />
                   Upload Medical Image
                 </CardTitle>
                 <CardDescription>
                   Upload X-rays, MRIs, CT scans, or pathology slides for analysis
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ImageUploader
                   onImageUpload={handleImageUpload}
                   acceptedFileTypes={['image/jpeg', 'image/png', 'image/gif']}
@@ -107,13 +122,25 @@ const ImageAnalysis: React.FC = () => {
                 
                 <div className="mt-6">
                   <label className="block text-sm font-medium mb-2">
-                    Custom Analysis Instructions (Optional)
+                    Analysis Instructions
                   </label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {predefinedPrompts.map((prompt, index) => (
+                      <Badge 
+                        key={index}
+                        variant={prompt === customPrompt ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-purple-100 dark:hover:bg-slate-800"
+                        onClick={() => setCustomPrompt(prompt)}
+                      >
+                        Prompt {index + 1}
+                      </Badge>
+                    ))}
+                  </div>
                   <Textarea
                     placeholder="Enter specific instructions for the analysis..."
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
-                    className="resize-none"
+                    className="resize-none border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                     rows={4}
                   />
                 </div>
@@ -122,7 +149,7 @@ const ImageAnalysis: React.FC = () => {
                   <Button 
                     onClick={handleAnalyze} 
                     disabled={!selectedImage || isLoading}
-                    className="relative overflow-hidden"
+                    className="relative overflow-hidden bg-purple-600 hover:bg-purple-700"
                   >
                     {isLoading ? (
                       <>
@@ -140,15 +167,15 @@ const ImageAnalysis: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader>
+            <Card className="shadow-md border-0">
+              <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
                 <CardTitle className="flex items-center">
-                  <AlertCircle className="mr-2" size={20} />
+                  <AlertCircle className="mr-2 text-purple-500" size={20} />
                   Important Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="prose prose-sm max-w-none">
-                <ul className="space-y-2 list-disc pl-4">
+              <CardContent className="pt-6">
+                <ul className="space-y-3 list-disc pl-5 text-slate-700 dark:text-slate-300">
                   <li>Ensure images are clear and well-lit for the best analysis results</li>
                   <li>Remove any personal identifying information from the images</li>
                   <li>The analysis is meant to assist, not replace professional medical advice</li>
@@ -156,9 +183,9 @@ const ImageAnalysis: React.FC = () => {
                   <li>Maximum file size: 10MB</li>
                 </ul>
                 
-                <div className="mt-6 p-3 bg-accent rounded-md">
-                  <h4 className="font-medium mb-2">How It Works</h4>
-                  <p className="text-sm">
+                <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-md border border-purple-100 dark:border-purple-800">
+                  <h4 className="font-medium mb-2 text-purple-700 dark:text-purple-300">How It Works</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     Our AI system analyzes your medical images using advanced computer vision and machine learning models. 
                     It can identify potential anomalies, provide disease probability scores, 
                     and suggest further steps for diagnosis.
@@ -180,6 +207,9 @@ const ImageAnalysis: React.FC = () => {
                 title="Analysis Results"
                 onDownload={handleDownloadResults}
                 onShare={() => {}}
+                extraButtons={
+                  <TextToSpeechButton text={analysisResult} />
+                }
               >
                 <div className="whitespace-pre-wrap text-sm">
                   {analysisResult}

@@ -46,7 +46,7 @@ export const getGeminiVisionModel = () => {
 // Function to analyze medical images
 export const analyzeMedicalImage = async (file: File, promptText: string) => {
   try {
-    const model = getGeminiVisionModel();
+    const model = getGemini2Model();
     const imagePart = await fileToGenerativePart(file);
     
     const prompt = promptText || 

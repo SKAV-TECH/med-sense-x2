@@ -23,6 +23,7 @@ interface AppContextProps {
   updateUserData: (data: Partial<UserData>) => void;
   recentActivities: string[];
   addActivity: (activity: string) => void;
+  addRecentActivity: (activity: string) => void; // Added this method
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   encryptData: (data: any) => string;
@@ -87,6 +88,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // Alias for addActivity to maintain backward compatibility
+  const addRecentActivity = addActivity;
+
   // Toggle sidebar function
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
@@ -133,6 +137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserData,
         recentActivities,
         addActivity,
+        addRecentActivity,
         isSidebarOpen,
         toggleSidebar,
         encryptData,
