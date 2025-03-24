@@ -26,23 +26,27 @@ export const fileToGenerativePart = async (file: File) => {
   });
 };
 
-// Get models
+// Get models using the specified Gemini models
 export const getGeminiProModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 };
 
 export const getGemini2Model = () => {
-  return genAI.getGenerativeModel({ model: "gemini-pro" }); // Using gemini-pro as a fallback since gemini-2.0 isn't directly available yet
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 };
 
 export const getGemini2FlashModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-pro-vision" }); // Using gemini-pro-vision as a fallback
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+};
+
+export const getGeminiVisionModel = () => {
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
 };
 
 // Function to analyze medical images
 export const analyzeMedicalImage = async (file: File, promptText: string) => {
   try {
-    const model = getGeminiProModel();
+    const model = getGeminiVisionModel();
     const imagePart = await fileToGenerativePart(file);
     
     const prompt = promptText || 
@@ -103,7 +107,7 @@ export const analyzeMedication = async (medicationName: string, patientInfo?: st
 // Function to analyze prescription image
 export const analyzePrescriptionImage = async (file: File) => {
   try {
-    const model = getGeminiProModel();
+    const model = getGeminiVisionModel();
     const imagePart = await fileToGenerativePart(file);
     
     const prompt = "Analyze this prescription image. Identify the medications prescribed, dosages, instructions, and any other relevant information. Also note any potential concerns or interactions between the medications.";
@@ -147,7 +151,7 @@ export const searchYouTubeVideos = async (query: string, maxResults: number = 5)
 // Function to summarize a YouTube video
 export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string) => {
   try {
-    const model = getGemini2Model();
+    const model = getGemini2FlashModel();
     const prompt = `Summarize the key medical information and takeaways from this YouTube video titled "${videoTitle}". Provide the information in a concise, structured format focusing on the main medical concepts, treatments discussed, and expert advice given.`;
     
     const result = await model.generateContent(prompt);

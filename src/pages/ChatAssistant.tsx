@@ -12,6 +12,14 @@ import { askHealthQuestion } from '@/lib/api';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 
+// Add WebSpeech API TypeScript declarations
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 interface Message {
   text: string;
   isUser: boolean;
