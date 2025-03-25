@@ -77,7 +77,7 @@ const UserProfile: React.FC = () => {
     
     toast({
       title: "Profile Updated",
-      description: "Your health profile has been saved successfully.",
+      description: "Your health profile has been saved successfully."
     });
   };
 
