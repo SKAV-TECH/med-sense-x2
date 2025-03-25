@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { FileImage, AlertCircle, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileImage, ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +18,7 @@ import DetailedViewToggle from '@/components/UI/DetailedViewToggle';
 const ImageAnalysis: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [customPrompt, setCustomPrompt] = useState(
-    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections."
+    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level, and recommendations."
   );
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +75,7 @@ const ImageAnalysis: React.FC = () => {
   };
 
   const predefinedPrompts = [
-    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections.",
+    "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level, and recommendations.",
     "Provide a radiologist-style report for this medical image, including findings, impressions, and recommendations.",
     "Analyze this medical image and explain the findings in simple terms that a patient would understand.",
     "Identify any abnormalities in this medical image and provide differential diagnoses with probability scores."
@@ -84,38 +83,31 @@ const ImageAnalysis: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-lg text-white shadow-lg"
-      >
-        <h1 className="text-3xl font-bold mb-2">Medical Image Analysis</h1>
-        <p className="text-white/90 mt-2">
-          Upload medical images for AI-powered analysis and disease detection
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <h1 className="text-2xl font-medium mb-2">Medical Image Analysis</h1>
+        <p className="text-slate-600 dark:text-slate-400">
+          Upload medical images for AI-powered analysis
         </p>
-      </motion.div>
+      </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
-          <TabsTrigger value="upload" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Upload Image</TabsTrigger>
-          <TabsTrigger value="results" disabled={!analysisResult} className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">
+        <TabsList className="grid grid-cols-2 mb-6">
+          <TabsTrigger value="upload">Upload Image</TabsTrigger>
+          <TabsTrigger value="results" disabled={!analysisResult}>
             Analysis Results
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="upload">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="overflow-hidden shadow-md border-0">
-              <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
+            <Card className="shadow-sm">
+              <CardHeader>
                 <CardTitle className="flex items-center">
-                  <FileImage className="mr-2 text-purple-500" size={20} />
+                  <FileImage className="mr-2" size={18} />
                   Upload Medical Image
                 </CardTitle>
-                <CardDescription>
-                  Upload X-rays, MRIs, CT scans, or pathology slides for analysis
-                </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent>
                 <ImageUploader
                   onImageUpload={handleImageUpload}
                   acceptedFileTypes={['image/jpeg', 'image/png', 'image/gif']}
@@ -131,7 +123,7 @@ const ImageAnalysis: React.FC = () => {
                       <Badge 
                         key={index}
                         variant={prompt === customPrompt ? "default" : "outline"}
-                        className="cursor-pointer hover:bg-purple-100 dark:hover:bg-slate-800"
+                        className="cursor-pointer"
                         onClick={() => setCustomPrompt(prompt)}
                       >
                         Prompt {index + 1}
@@ -142,7 +134,7 @@ const ImageAnalysis: React.FC = () => {
                     placeholder="Enter specific instructions for the analysis..."
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
-                    className="resize-none border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="resize-none"
                     rows={4}
                   />
                 </div>
@@ -157,7 +149,6 @@ const ImageAnalysis: React.FC = () => {
                   <Button 
                     onClick={handleAnalyze} 
                     disabled={!selectedImage || isLoading}
-                    className="relative overflow-hidden bg-purple-600 hover:bg-purple-700"
                   >
                     {isLoading ? (
                       <>
@@ -175,20 +166,16 @@ const ImageAnalysis: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card className="shadow-md border-0">
-              <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
-                <CardTitle className="flex items-center">
-                  <AlertCircle className="mr-2 text-purple-500" size={20} />
-                  Important Information
-                </CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Important Information</CardTitle>
               </CardHeader>
-              <CardContent className="pt-6">
-                <ul className="space-y-3 list-disc pl-5 text-slate-700 dark:text-slate-300">
+              <CardContent>
+                <ul className="space-y-3 list-disc pl-5 text-slate-600 dark:text-slate-400">
                   <li>Ensure images are clear and well-lit for the best analysis results</li>
                   <li>Remove any personal identifying information from the images</li>
                   <li>The analysis is meant to assist, not replace professional medical advice</li>
                   <li>Supported file types: JPEG, PNG, GIF</li>
-                  <li>Maximum file size: 10MB</li>
                 </ul>
               </CardContent>
             </Card>
@@ -197,11 +184,7 @@ const ImageAnalysis: React.FC = () => {
         
         <TabsContent value="results">
           {analysisResult && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
+            <div>
               <ResultCard
                 title="Analysis Results"
                 onDownload={handleDownloadResults}
@@ -228,7 +211,7 @@ const ImageAnalysis: React.FC = () => {
                   Start New Analysis
                 </Button>
               </div>
-            </motion.div>
+            </div>
           )}
         </TabsContent>
       </Tabs>
