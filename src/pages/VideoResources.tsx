@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Youtube, ExternalLink, PlaySquare, Volume } from 'lucide-react';
+import { Search, Youtube, ExternalLink, PlaySquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import LoadingIndicator from '@/components/UI/LoadingIndicator';
 import ResultCard from '@/components/UI/ResultCard';
 import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
+import ConciseToggle from '@/components/UI/ConciseToggle';
 
 interface Video {
   id: string;
@@ -32,6 +33,7 @@ const VideoResources: React.FC = () => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [videoSummary, setVideoSummary] = useState('');
+  const [isConcise, setIsConcise] = useState(false);
   
   // Search videos query
   const { isLoading: isSearching, refetch: searchVideos } = useQuery({
@@ -86,13 +88,13 @@ const VideoResources: React.FC = () => {
   
   // Summarize video query
   const { isLoading: isSummarizing, refetch: summarizeVideo } = useQuery({
-    queryKey: ['summarizeVideo', selectedVideo?.id],
+    queryKey: ['summarizeVideo', selectedVideo?.id, isConcise],
     queryFn: async () => {
       if (!selectedVideo) {
         throw new Error('No video selected');
       }
       
-      const summary = await summarizeYouTubeVideo(selectedVideo.id, selectedVideo.title);
+      const summary = await summarizeYouTubeVideo(selectedVideo.id, selectedVideo.title, isConcise);
       setVideoSummary(summary);
       addRecentActivity(`Watched medical video: ${selectedVideo.title}`);
       return summary;
@@ -131,6 +133,14 @@ const VideoResources: React.FC = () => {
     setSelectedVideo(video);
     setVideoSummary('');
     summarizeVideo();
+  };
+  
+  const handleToggleConcise = (value: boolean) => {
+    setIsConcise(value);
+    if (selectedVideo && videoSummary) {
+      // Re-summarize the video with the new concise setting
+      summarizeVideo();
+    }
   };
   
   useEffect(() => {
@@ -297,7 +307,10 @@ const VideoResources: React.FC = () => {
               
               <Card className="shadow-md border-0">
                 <CardHeader className="bg-slate-50 dark:bg-slate-800/50 pb-3">
-                  <CardTitle className="text-lg">{selectedVideo.title}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{selectedVideo.title}</CardTitle>
+                    <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
+                  </div>
                   <CardDescription>{selectedVideo.channelTitle} • {new Date(selectedVideo.publishedAt).toLocaleDateString()}</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">

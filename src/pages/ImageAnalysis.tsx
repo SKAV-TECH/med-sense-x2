@@ -14,6 +14,7 @@ import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 import { Badge } from '@/components/ui/badge';
+import ConciseToggle from '@/components/UI/ConciseToggle';
 
 const ImageAnalysis: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -23,6 +24,7 @@ const ImageAnalysis: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
+  const [isConcise, setIsConcise] = useState(false);
   
   const { addActivity } = useApp();
   const { toast } = useToast();
@@ -45,7 +47,7 @@ const ImageAnalysis: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const result = await analyzeMedicalImage(selectedImage, customPrompt);
+      const result = await analyzeMedicalImage(selectedImage, customPrompt, isConcise);
       setAnalysisResult(result);
       addActivity(`Analyzed medical image: ${selectedImage.name}`);
       setActiveTab('results');
@@ -79,6 +81,14 @@ const ImageAnalysis: React.FC = () => {
     "Analyze this medical image and explain the findings in simple terms that a patient would understand.",
     "Identify any abnormalities in this medical image and provide differential diagnoses with probability scores."
   ];
+
+  const handleToggleConcise = (value: boolean) => {
+    setIsConcise(value);
+    if (analysisResult && value !== isConcise) {
+      // Re-analyze the image with the new concise setting if we already have results
+      handleAnalyze();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -121,9 +131,12 @@ const ImageAnalysis: React.FC = () => {
                 />
                 
                 <div className="mt-6">
-                  <label className="block text-sm font-medium mb-2">
-                    Analysis Instructions
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium">
+                      Analysis Instructions
+                    </label>
+                    <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {predefinedPrompts.map((prompt, index) => (
                       <Badge 
@@ -203,8 +216,11 @@ const ImageAnalysis: React.FC = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
+              <div className="flex justify-end mb-2">
+                <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
+              </div>
               <ResultCard
-                title="Analysis Results"
+                title={isConcise ? "Concise Analysis Results" : "Detailed Analysis Results"}
                 onDownload={handleDownloadResults}
                 onShare={() => {}}
                 extraButtons={

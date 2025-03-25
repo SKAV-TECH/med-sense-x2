@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import LoadingIndicator from '@/components/UI/LoadingIndicator';
 import ResultCard from '@/components/UI/ResultCard';
 import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
+import ConciseToggle from '@/components/UI/ConciseToggle';
 
 const TreatmentPlanner: React.FC = () => {
   const { addRecentActivity, recentActivities } = useApp();
@@ -27,6 +28,7 @@ const TreatmentPlanner: React.FC = () => {
   const [treatmentPlan, setTreatmentPlan] = useState('');
   const [recentActivitiesText, setRecentActivitiesText] = useState('');
   const [useRecentActivities, setUseRecentActivities] = useState(false);
+  const [isConcise, setIsConcise] = useState(false);
   
   useEffect(() => {
     if (recentActivities.length > 0) {
@@ -36,7 +38,7 @@ const TreatmentPlanner: React.FC = () => {
   }, [recentActivities]);
   
   const { isLoading, refetch } = useQuery({
-    queryKey: ['treatmentPlan', patientInfo, symptoms, medicalHistory, useRecentActivities],
+    queryKey: ['treatmentPlan', patientInfo, symptoms, medicalHistory, useRecentActivities, isConcise],
     queryFn: async () => {
       if (!patientInfo || (!symptoms && !useRecentActivities)) {
         throw new Error('Patient information and symptoms (or recent activities) are required.');
@@ -47,7 +49,7 @@ const TreatmentPlanner: React.FC = () => {
         ? `${symptoms}\n\nRecent medical activities:\n${recentActivitiesText}`
         : symptoms;
       
-      const result = await generateTreatmentPlan(patientInfo, effectiveSymptoms, medicalHistory);
+      const result = await generateTreatmentPlan(patientInfo, effectiveSymptoms, medicalHistory, isConcise);
       setTreatmentPlan(result);
       addRecentActivity(`Generated treatment plan for ${useRecentActivities ? 'recent activities' : `symptoms: ${symptoms.substring(0, 30)}...`}`);
       return result;
@@ -126,6 +128,14 @@ const TreatmentPlanner: React.FC = () => {
     }
   };
 
+  const handleToggleConcise = (value: boolean) => {
+    setIsConcise(value);
+    if (treatmentPlan) {
+      // Regenerate the treatment plan with the new concise setting
+      refetch();
+    }
+  };
+
   return (
     <div className="space-y-8">
       <motion.div
@@ -155,15 +165,20 @@ const TreatmentPlanner: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-5">
-              <div>
-                <Label htmlFor="patientInfo" className="text-slate-700 dark:text-slate-300">Basic Information</Label>
-                <Input
-                  id="patientInfo"
-                  placeholder="Age, gender, height, weight, etc."
-                  value={patientInfo}
-                  onChange={(e) => setPatientInfo(e.target.value)}
-                  className="mt-1 border-slate-200 dark:border-slate-700"
-                />
+              <div className="flex justify-between items-center">
+                <div className="flex-grow">
+                  <Label htmlFor="patientInfo" className="text-slate-700 dark:text-slate-300">Basic Information</Label>
+                  <Input
+                    id="patientInfo"
+                    placeholder="Age, gender, height, weight, etc."
+                    value={patientInfo}
+                    onChange={(e) => setPatientInfo(e.target.value)}
+                    className="mt-1 border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div className="ml-4 mt-6">
+                  <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
+                </div>
               </div>
               
               <div className="flex items-center justify-between">
@@ -245,7 +260,7 @@ const TreatmentPlanner: React.FC = () => {
             </div>
           ) : treatmentPlan ? (
             <ResultCard
-              title="Treatment Plan"
+              title={isConcise ? "Concise Treatment Plan" : "Detailed Treatment Plan"}
               onDownload={handleExport}
               onShare={handleShare}
               extraButtons={
