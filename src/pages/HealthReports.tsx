@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Upload, BarChart, Download, Share2, Volume } from 'lucide-react';
+import { FileText, Upload, BarChart, Download, Share2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +13,7 @@ import ImageUploader from '@/components/UI/ImageUploader';
 import LoadingIndicator from '@/components/UI/LoadingIndicator';
 import ResultCard from '@/components/UI/ResultCard';
 import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
+import DetailedViewToggle from '@/components/UI/DetailedViewToggle';
 
 const HealthReports: React.FC = () => {
   const { addRecentActivity } = useApp();
@@ -20,16 +21,17 @@ const HealthReports: React.FC = () => {
   
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [reportAnalysis, setReportAnalysis] = useState('');
+  const [isDetailedView, setIsDetailedView] = useState(false);
   
   // Query for health report analysis
   const { isLoading, refetch } = useQuery({
-    queryKey: ['healthReport', reportFile],
+    queryKey: ['healthReport', reportFile, isDetailedView],
     queryFn: async () => {
       if (!reportFile) {
         throw new Error('Report file is required.');
       }
       
-      const result = await analyzeHealthReport(reportFile);
+      const result = await analyzeHealthReport(reportFile, isDetailedView);
       setReportAnalysis(result);
       addRecentActivity(`Analyzed health report: ${reportFile.name}`);
       return result;
@@ -106,9 +108,7 @@ const HealthReports: React.FC = () => {
       >
         <h1 className="text-3xl font-bold mb-2">Health Reports</h1>
         <p className="text-white/90 max-w-3xl">
-          Upload and analyze your medical reports such as X-rays, MRIs, CT scans, lab results, and other
-          health documents. Our AI will generate a comprehensive summary with key findings, diagnoses, 
-          causes, treatment plans, and follow-up recommendations.
+          Upload and analyze your medical reports. Our AI will generate a helpful summary with key findings.
         </p>
       </motion.div>
       
@@ -129,7 +129,6 @@ const HealthReports: React.FC = () => {
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Upload your medical reports in image format (JPG, PNG) or PDF. 
-                  Our AI will analyze the content and provide you with a comprehensive summary.
                 </p>
                 
                 <ImageUploader
@@ -138,6 +137,12 @@ const HealthReports: React.FC = () => {
                   maxSize={10 * 1024 * 1024}
                   label="Upload Medical Report"
                   isLoading={isLoading}
+                />
+                
+                <DetailedViewToggle 
+                  isDetailed={isDetailedView}
+                  onChange={setIsDetailedView}
+                  className="mt-4"
                 />
                 
                 <Button 
@@ -190,7 +195,7 @@ const HealthReports: React.FC = () => {
               onDownload={handleExport}
               onShare={handleShare}
               extraButtons={
-                <TextToSpeechButton text={reportAnalysis} />
+                <TextToSpeechButton text={reportAnalysis} showLabel />
               }
             >
               <div className="prose prose-sm max-w-none dark:prose-invert">
@@ -202,8 +207,7 @@ const HealthReports: React.FC = () => {
               <BarChart className="h-12 w-12 text-indigo-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No Report Analysis Yet</h3>
               <p className="text-muted-foreground mb-4">
-                Upload a medical report and click "Analyze Report" to receive an AI-generated analysis with key findings,
-                diagnoses, and recommendations.
+                Upload a medical report and click "Analyze Report" to receive a helpful AI summary.
               </p>
             </div>
           )}
@@ -214,8 +218,7 @@ const HealthReports: React.FC = () => {
         <h3 className="text-lg font-medium mb-2 text-indigo-700 dark:text-indigo-300">Disclaimer</h3>
         <p className="text-sm text-muted-foreground">
           The report analysis provided by our AI is for informational purposes only and is not a substitute for 
-          professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other 
-          qualified health provider with any questions you may have regarding your medical reports or health condition.
+          professional medical advice.
         </p>
       </div>
     </div>

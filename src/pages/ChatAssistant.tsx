@@ -1,14 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Mic, MicOff, User, InfoIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Send, Mic, MicOff, InfoIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/context/AppContext';
 import ChatBubble from '@/components/UI/ChatBubble';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -19,11 +17,15 @@ import {
 } from '@/components/ui/card';
 import { ButtonPro } from '@/components/ui/button-pro';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { truncateResponse } from '@/lib/api';
+import DetailedViewToggle from '@/components/UI/DetailedViewToggle';
+import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 
 interface Message {
   content: string;
   isUser: boolean;
   timestamp: Date;
+  originalContent?: string;
 }
 
 // Define a type for speech recognition errors
@@ -44,8 +46,9 @@ const ChatAssistant: React.FC = () => {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetailedView, setIsDetailedView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { speak } = useTextToSpeech();
+  const { toast } = useToast();
 
   // Initialize speech recognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -74,6 +77,23 @@ const ChatAssistant: React.FC = () => {
       });
     };
   }
+
+  useEffect(() => {
+    // Update message displays when detailed view mode changes
+    if (messages.length > 0) {
+      const updatedMessages = messages.map(msg => {
+        if (msg.isUser || !msg.originalContent) return msg;
+        
+        return {
+          ...msg,
+          content: isDetailedView ? msg.originalContent : truncateResponse(msg.originalContent, 50, false),
+          originalContent: msg.originalContent
+        };
+      });
+      
+      setMessages(updatedMessages);
+    }
+  }, [isDetailedView]);
 
   const toggleListening = () => {
     if (!recognition) {
@@ -123,9 +143,14 @@ const ChatAssistant: React.FC = () => {
       
       // Simulate API response for demonstration
       setTimeout(() => {
-        const responseContent = generateMockResponse(input);
+        const fullResponseContent = generateMockResponse(input);
+        const displayContent = isDetailedView 
+          ? fullResponseContent 
+          : truncateResponse(fullResponseContent, 50, false);
+        
         const botMessage: Message = {
-          content: responseContent,
+          content: displayContent,
+          originalContent: fullResponseContent,
           isUser: false,
           timestamp: new Date(),
         };
@@ -184,10 +209,6 @@ const ChatAssistant: React.FC = () => {
     };
   }, [isListening, recognition]);
 
-  const handleTextToSpeech = (text: string) => {
-    speak(text);
-  };
-
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
       <motion.div
@@ -205,10 +226,18 @@ const ChatAssistant: React.FC = () => {
 
         <Card className="flex-1 flex flex-col overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle>Chat with Medical AI</CardTitle>
-            <CardDescription>
-              Ask questions about symptoms, conditions, or general health advice
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Chat with Medical AI</CardTitle>
+                <CardDescription>
+                  Ask questions about symptoms, conditions, or general health advice
+                </CardDescription>
+              </div>
+              <DetailedViewToggle 
+                isDetailed={isDetailedView}
+                onChange={setIsDetailedView}
+              />
+            </div>
           </CardHeader>
           
           <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -225,16 +254,14 @@ const ChatAssistant: React.FC = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="ml-10 mt-1"
+                      className="ml-10 mt-1 flex space-x-2"
                     >
-                      <Button
-                        variant="ghost"
+                      <TextToSpeechButton 
+                        text={message.originalContent || message.content}
                         size="sm"
+                        showLabel
                         className="text-xs text-muted-foreground"
-                        onClick={() => handleTextToSpeech(message.content)}
-                      >
-                        🔊 Listen
-                      </Button>
+                      />
                     </motion.div>
                   )}
                 </div>
@@ -289,7 +316,7 @@ const ChatAssistant: React.FC = () => {
         <div className="mt-6 text-sm text-muted-foreground flex items-center">
           <InfoIcon size={16} className="mr-2" />
           <p>
-            This AI assistant provides general information only and is not a substitute for professional medical advice, diagnosis, or treatment.
+            This AI assistant provides general information only and is not a substitute for professional medical advice.
           </p>
         </div>
       </motion.div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Save, CheckCircle } from 'lucide-react';
@@ -10,12 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 
 const UserProfile: React.FC = () => {
   const { userData, updateUserData, addActivity } = useApp();
   const [saveSuccess, setSaveSuccess] = useState(false);
   
-  // Local form state
   const [formData, setFormData] = useState({
     name: userData.name || '',
     age: userData.age || '',
@@ -29,7 +28,6 @@ const UserProfile: React.FC = () => {
     medications: userData.medications?.join(', ') || ''
   });
 
-  // Reset form data when userData changes
   useEffect(() => {
     setFormData({
       name: userData.name || '',
@@ -55,7 +53,6 @@ const UserProfile: React.FC = () => {
   };
 
   const saveProfile = () => {
-    // Convert string lists back to arrays
     const updatedData = {
       name: formData.name,
       age: formData.age ? Number(formData.age) : undefined,
@@ -277,3 +274,4 @@ const UserProfile: React.FC = () => {
 };
 
 export default UserProfile;
+

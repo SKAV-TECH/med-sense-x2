@@ -14,6 +14,7 @@ import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 import { Badge } from '@/components/ui/badge';
+import DetailedViewToggle from '@/components/UI/DetailedViewToggle';
 
 const ImageAnalysis: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -23,6 +24,7 @@ const ImageAnalysis: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
+  const [isDetailedView, setIsDetailedView] = useState(false);
   
   const { addActivity } = useApp();
   const { toast } = useToast();
@@ -45,7 +47,7 @@ const ImageAnalysis: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const result = await analyzeMedicalImage(selectedImage, customPrompt);
+      const result = await analyzeMedicalImage(selectedImage, customPrompt, isDetailedView);
       setAnalysisResult(result);
       addActivity(`Analyzed medical image: ${selectedImage.name}`);
       setActiveTab('results');
@@ -145,6 +147,12 @@ const ImageAnalysis: React.FC = () => {
                   />
                 </div>
                 
+                <DetailedViewToggle 
+                  isDetailed={isDetailedView}
+                  onChange={setIsDetailedView}
+                  className="mt-4"
+                />
+                
                 <div className="mt-6 flex justify-end">
                   <Button 
                     onClick={handleAnalyze} 
@@ -182,15 +190,6 @@ const ImageAnalysis: React.FC = () => {
                   <li>Supported file types: JPEG, PNG, GIF</li>
                   <li>Maximum file size: 10MB</li>
                 </ul>
-                
-                <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-md border border-purple-100 dark:border-purple-800">
-                  <h4 className="font-medium mb-2 text-purple-700 dark:text-purple-300">How It Works</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Our AI system analyzes your medical images using advanced computer vision and machine learning models. 
-                    It can identify potential anomalies, provide disease probability scores, 
-                    and suggest further steps for diagnosis.
-                  </p>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -208,7 +207,7 @@ const ImageAnalysis: React.FC = () => {
                 onDownload={handleDownloadResults}
                 onShare={() => {}}
                 extraButtons={
-                  <TextToSpeechButton text={analysisResult} />
+                  <TextToSpeechButton text={analysisResult} showLabel />
                 }
               >
                 <div className="whitespace-pre-wrap text-sm">

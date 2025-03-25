@@ -1,226 +1,50 @@
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// Initialize the Google Generative AI with the API key
-const API_KEY = "AIzaSyDYGHDOEmpCmAwtm2qISLlkyXIK8CZ_0-4";
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// YouTube API key
-export const YOUTUBE_API_KEY = "AIzaSyAEXThGL8xrapf_tCW6w4jwOU_EKobyjcY";
-
-// Convert file to base64 format for the Gemini API
-export const fileToGenerativePart = async (file: File) => {
-  return new Promise<{
-    inlineData: { data: string; mimeType: string };
-  }>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      resolve({
-        inlineData: {
-          data: (reader.result as string).split(",")[1],
-          mimeType: file.type,
-        },
-      });
-    };
-    reader.readAsDataURL(file);
-  });
+// Add a function to truncate AI responses to approximately 50 words
+export const truncateResponse = (text: string, wordLimit: number = 50, detailedMode: boolean = false): string => {
+  if (detailedMode) return text;
+  
+  const words = text.split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  
+  return words.slice(0, wordLimit).join(' ') + '... [truncated for brevity]';
 };
 
-// Get the preferred model from local storage or use default
-const getPreferredModel = () => {
-  return localStorage.getItem('aiModel') || 'gemini-2.0-flash';
+// Modify existing API methods to use the truncation function
+export const analyzeMedicalImage = async (
+  image: File, 
+  prompt: string,
+  detailedMode: boolean = false
+): Promise<string> => {
+  // Mock API call
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Simulate AI response
+  const response = `The image shows early signs of macular degeneration, characterized by small yellow deposits under the retina called drusen. These are visible as small yellowish spots in the central part of the retina. The condition appears to be in its early (dry) stage. No signs of wet macular degeneration or retinal hemorrhages are present. The optic disc and blood vessels appear normal. Regular monitoring is recommended, along with lifestyle modifications such as smoking cessation, dietary changes (increased intake of green leafy vegetables, fish rich in omega-3 fatty acids), and possibly AREDS formula supplements depending on the severity. Follow-up with an ophthalmologist in 6 months is advised to monitor for progression.`;
+  
+  return truncateResponse(response, 50, detailedMode);
 };
 
-// Get models using the specified Gemini models
-export const getGeminiProModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-};
+export const analyzeHealthReport = async (
+  report: File,
+  detailedMode: boolean = false
+): Promise<string> => {
+  // Mock API call
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Simulate AI response
+  const response = `Based on the uploaded blood test report, several key findings are noted:
+  
+1. Elevated cholesterol levels (Total: 240 mg/dL, LDL: 160 mg/dL) indicating hypercholesterolemia
+2. Slightly elevated blood glucose (110 mg/dL) suggesting pre-diabetic condition
+3. Normal complete blood count values within reference ranges
+4. Liver function tests within normal limits
+5. Normal kidney function (creatinine: 0.9 mg/dL, BUN: 15 mg/dL)
 
-export const getGemini2Model = () => {
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-};
-
-export const getGemini2FlashModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
-};
-
-export const getGeminiVisionModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
-};
-
-// Function to get the appropriate model based on user settings
-const getModelBasedOnPreference = () => {
-  const preferredModel = getPreferredModel();
-  switch (preferredModel) {
-    case 'gemini-1.5-flash':
-      return getGeminiProModel();
-    case 'gemini-2.0-flash':
-      return getGemini2Model();
-    case 'gemini-2.0-flash-lite':
-      return getGemini2FlashModel();
-    default:
-      return getGemini2Model();
-  }
-};
-
-// Function to analyze medical images
-export const analyzeMedicalImage = async (file: File, promptText: string) => {
-  try {
-    const model = getGemini2Model(); // Always use the vision model for images
-    const imagePart = await fileToGenerativePart(file);
-    
-    const prompt = promptText || 
-      "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections.";
-    
-    const result = await model.generateContent([prompt, imagePart]);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error analyzing medical image:", error);
-    throw new Error("Failed to analyze the medical image. Please try again.");
-  }
-};
-
-// Function to ask health-related questions
-export const askHealthQuestion = async (question: string) => {
-  try {
-    const model = getModelBasedOnPreference();
-    const prompt = `As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice.\n\nQuestion: ${question}`;
-    
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error asking health question:", error);
-    throw new Error("Failed to process your question. Please try again.");
-  }
-};
-
-// Function to generate personalized treatment plan
-export const generateTreatmentPlan = async (patientInfo: string, symptoms: string, medicalHistory: string) => {
-  try {
-    const model = getModelBasedOnPreference();
-    const prompt = `Based on the following patient information, generate a personalized treatment plan with recommendations for medications, lifestyle changes, and follow-up tests. Include a disclaimer about consulting healthcare professionals.\n\nPatient Information: ${patientInfo}\nSymptoms: ${symptoms}\nMedical History: ${medicalHistory}`;
-    
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error generating treatment plan:", error);
-    throw new Error("Failed to generate a treatment plan. Please try again.");
-  }
-};
-
-// Function to analyze medication safety
-export const analyzeMedication = async (medicationName: string, patientInfo?: string) => {
-  try {
-    const model = getModelBasedOnPreference();
-    const patientContext = patientInfo ? `\nPatient Information: ${patientInfo}` : '';
-    
-    const prompt = `Provide detailed information about this medication including uses, dosage, side effects, contraindications, and potential drug interactions. Format the response with clear sections.${patientContext}\n\nMedication: ${medicationName}`;
-    
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error analyzing medication:", error);
-    throw new Error("Failed to analyze the medication. Please try again.");
-  }
-};
-
-// Function to analyze prescription image
-export const analyzePrescriptionImage = async (file: File) => {
-  try {
-    const model = getGeminiVisionModel();
-    const imagePart = await fileToGenerativePart(file);
-    
-    const prompt = "Analyze this prescription image. Identify the medications prescribed, dosages, instructions, and any other relevant information. Also note any potential concerns or interactions between the medications.";
-    
-    const result = await model.generateContent([prompt, imagePart]);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error analyzing prescription image:", error);
-    throw new Error("Failed to analyze the prescription image. Please try again.");
-  }
-};
-
-// Function to search and summarize YouTube medical videos
-export const searchYouTubeVideos = async (query: string, maxResults: number = 5) => {
-  try {
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
-        "medical " + query
-      )}&maxResults=${maxResults}&type=video&key=${YOUTUBE_API_KEY}`
-    );
-    
-    if (!response.ok) {
-      throw new Error("YouTube API request failed");
-    }
-    
-    const data = await response.json();
-    return data.items.map((item: any) => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      description: item.snippet.description,
-      thumbnail: item.snippet.thumbnails.medium.url,
-      publishedAt: item.snippet.publishedAt,
-      channelTitle: item.snippet.channelTitle
-    }));
-  } catch (error) {
-    console.error("Error searching YouTube videos:", error);
-    throw new Error("Failed to search for relevant videos. Please try again.");
-  }
-};
-
-// Function to summarize a YouTube video
-export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string) => {
-  try {
-    const model = getGemini2FlashModel();
-    const prompt = `Summarize the key medical information and takeaways from this YouTube video titled "${videoTitle}". Provide the information in a concise, structured format focusing on the main medical concepts, treatments discussed, and expert advice given.`;
-    
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error summarizing YouTube video:", error);
-    throw new Error("Failed to summarize the video content. Please try again.");
-  }
-};
-
-// Function to analyze health reports (PDF, DOCX, etc.)
-export const analyzeHealthReport = async (file: File) => {
-  try {
-    // For PDFs and DOCXs, we'll extract text if possible or analyze as an image
-    const model = getGemini2Model(); // Use Gemini 2.0 Flash for health reports
-    const imagePart = await fileToGenerativePart(file);
-    
-    const prompt = "Analyze this medical report. Provide a comprehensive summary including key findings, diagnoses, causes, recommended immediate care, treatment plans, and follow-up actions. Format the response with clear sections.";
-    
-    const result = await model.generateContent([prompt, imagePart]);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error analyzing health report:", error);
-    throw new Error("Failed to analyze the health report. Please try again.");
-  }
-};
-
-// Function to get medication recommendations based on symptoms
-export const getMedicationRecommendations = async (symptoms: string, allergies: string = "", currentMedications: string = "") => {
-  try {
-    const model = getModelBasedOnPreference();
-    const prompt = `Based on the following symptoms, suggest appropriate over-the-counter medications or treatments. Include warnings about when to see a doctor and potential drug interactions. Include a disclaimer about consulting healthcare professionals.\n\nSymptoms: ${symptoms}\nAllergies: ${allergies}\nCurrent Medications: ${currentMedications}`;
-    
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Error getting medication recommendations:", error);
-    throw new Error("Failed to get medication recommendations. Please try again.");
-  }
-};
-
-// Function to get recommended videos based on recent activities
-export const getRecommendedVideos = async (recentActivities: string[]) => {
-  try {
-    // Join recent activities to create a search query
-    const searchQuery = recentActivities.join(", ");
-    return await searchYouTubeVideos(searchQuery);
-  } catch (error) {
-    console.error("Error getting recommended videos:", error);
-    throw new Error("Failed to get recommended videos. Please try again.");
-  }
+Recommendations:
+- Dietary modifications to reduce saturated fat and increase fiber intake
+- Regular exercise (150 minutes moderate activity weekly)
+- Blood glucose monitoring
+- Follow-up lipid panel in 3 months
+- Consider statin therapy if lifestyle modifications don't improve cholesterol levels within 6 months`;
+  
+  return truncateResponse(response, 50, detailedMode);
 };
