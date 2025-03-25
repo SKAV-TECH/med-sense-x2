@@ -19,7 +19,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (isMobile && isSidebarOpen) {
       toggleSidebar();
     }
-  }, [isMobile]);
+  }, [isMobile, isSidebarOpen, toggleSidebar]);
   
   // Content animation variants
   const contentVariants = {
