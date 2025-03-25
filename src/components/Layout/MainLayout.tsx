@@ -19,16 +19,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (isMobile && isSidebarOpen) {
       toggleSidebar();
     }
-  }, [isMobile, isSidebarOpen, toggleSidebar]);
+  }, [isMobile]);
   
-  // Content animation variants
   const contentVariants = {
     expanded: { 
-      marginLeft: isMobile ? '0px' : '256px',
+      marginLeft: isMobile ? '0px' : '240px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     },
     collapsed: { 
-      marginLeft: isMobile ? '0px' : '80px',
+      marginLeft: isMobile ? '0px' : '72px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     }
   };
@@ -50,8 +49,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="container mx-auto px-4 py-6 md:px-6 lg:px-8 pt-6"
+            transition={{ duration: 0.2 }}
+            className="container mx-auto px-4 py-6 md:px-6 lg:px-8"
           >
             {children}
           </motion.div>

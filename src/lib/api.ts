@@ -1,238 +1,226 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize the Google Generative AI client
-const API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your actual API key
+// Initialize the Google Generative AI with the API key
+const API_KEY = "AIzaSyDYGHDOEmpCmAwtm2qISLlkyXIK8CZ_0-4";
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-// Add a function to truncate AI responses to approximately 50 words
-export const truncateResponse = (text: string, wordLimit: number = 50, detailedMode: boolean = false): string => {
-  if (detailedMode) return text;
-  
-  const words = text.split(/\s+/);
-  if (words.length <= wordLimit) return text;
-  
-  return words.slice(0, wordLimit).join(' ') + '... [truncated for brevity]';
+// YouTube API key
+export const YOUTUBE_API_KEY = "AIzaSyAEXThGL8xrapf_tCW6w4jwOU_EKobyjcY";
+
+// Convert file to base64 format for the Gemini API
+export const fileToGenerativePart = async (file: File) => {
+  return new Promise<{
+    inlineData: { data: string; mimeType: string };
+  }>((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve({
+        inlineData: {
+          data: (reader.result as string).split(",")[1],
+          mimeType: file.type,
+        },
+      });
+    };
+    reader.readAsDataURL(file);
+  });
 };
 
-// Image analysis with Gemini
-export const analyzeMedicalImage = async (
-  image: File, 
-  prompt: string,
-  detailedMode: boolean = false
-): Promise<string> => {
+// Get the preferred model from local storage or use default
+const getPreferredModel = () => {
+  return localStorage.getItem('aiModel') || 'gemini-2.0-flash';
+};
+
+// Get models using the specified Gemini models
+export const getGeminiProModel = () => {
+  return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+};
+
+export const getGemini2Model = () => {
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+};
+
+export const getGemini2FlashModel = () => {
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+};
+
+export const getGeminiVisionModel = () => {
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
+};
+
+// Function to get the appropriate model based on user settings
+const getModelBasedOnPreference = () => {
+  const preferredModel = getPreferredModel();
+  switch (preferredModel) {
+    case 'gemini-1.5-flash':
+      return getGeminiProModel();
+    case 'gemini-2.0-flash':
+      return getGemini2Model();
+    case 'gemini-2.0-flash-lite':
+      return getGemini2FlashModel();
+    default:
+      return getGemini2Model();
+  }
+};
+
+// Function to analyze medical images
+export const analyzeMedicalImage = async (file: File, promptText: string) => {
   try {
-    // Convert the image to a format Gemini can use
-    const imageData = await fileToGenerativePart(image);
+    const model = getGemini2Model(); // Always use the vision model for images
+    const imagePart = await fileToGenerativePart(file);
     
-    // Call Gemini with the image and prompt
-    const result = await model.generateContent([prompt, imageData]);
-    const response = await result.response;
-    const text = response.text();
+    const prompt = promptText || 
+      "Analyze this medical image in detail. Identify any visible abnormalities, potential diagnoses, severity level (low, medium, high), and recommendations for further tests or treatments. Format the response with clear sections.";
     
-    return truncateResponse(text, 50, detailedMode);
+    const result = await model.generateContent([prompt, imagePart]);
+    return result.response.text();
   } catch (error) {
     console.error("Error analyzing medical image:", error);
     throw new Error("Failed to analyze the medical image. Please try again.");
   }
 };
 
-export const analyzeHealthReport = async (
-  report: File,
-  detailedMode: boolean = false
-): Promise<string> => {
+// Function to ask health-related questions
+export const askHealthQuestion = async (question: string) => {
   try {
-    // Convert the report to a format Gemini can use
-    const reportData = await fileToGenerativePart(report);
-    
-    // Call Gemini with the report
-    const prompt = "Analyze this health report. Provide a summary of key findings, any abnormal values, and recommendations.";
-    const result = await model.generateContent([prompt, reportData]);
-    const response = await result.response;
-    const text = response.text();
-    
-    return truncateResponse(text, 50, detailedMode);
-  } catch (error) {
-    console.error("Error analyzing health report:", error);
-    throw new Error("Failed to analyze the health report. Please try again.");
-  }
-};
-
-export const analyzeMedication = async (
-  medicationName: string,
-  patientInfo: string = "",
-  detailedMode: boolean = false
-): Promise<string> => {
-  try {
-    let prompt = `Provide information about the medication ${medicationName}, including its uses, side effects, precautions, and typical dosage.`;
-    
-    if (patientInfo) {
-      prompt += ` Consider the following patient information: ${patientInfo}`;
-    }
+    const model = getModelBasedOnPreference();
+    const prompt = `As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice.\n\nQuestion: ${question}`;
     
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    return truncateResponse(text, 50, detailedMode);
+    return result.response.text();
   } catch (error) {
-    console.error("Error analyzing medication:", error);
-    throw new Error("Failed to analyze the medication. Please try again.");
+    console.error("Error asking health question:", error);
+    throw new Error("Failed to process your question. Please try again.");
   }
 };
 
-export const analyzePrescriptionImage = async (
-  image: File,
-  detailedMode: boolean = false
-): Promise<string> => {
+// Function to generate personalized treatment plan
+export const generateTreatmentPlan = async (patientInfo: string, symptoms: string, medicalHistory: string) => {
   try {
-    // Convert the image to a format Gemini can use
-    const imageData = await fileToGenerativePart(image);
-    
-    // Call Gemini with the image
-    const prompt = "Analyze this prescription image. List all medications, dosages, and instructions found in the prescription.";
-    const result = await model.generateContent([prompt, imageData]);
-    const response = await result.response;
-    const text = response.text();
-    
-    return truncateResponse(text, 50, detailedMode);
-  } catch (error) {
-    console.error("Error analyzing prescription image:", error);
-    throw new Error("Failed to analyze the prescription image. Please try again.");
-  }
-};
-
-export const generateTreatmentPlan = async (
-  patientInfo: string,
-  symptoms: string,
-  medicalHistory: string = "",
-  detailedMode: boolean = false
-): Promise<string> => {
-  try {
-    let prompt = `Generate a treatment plan based on the following information.
-    Patient information: ${patientInfo}
-    Symptoms: ${symptoms}`;
-    
-    if (medicalHistory) {
-      prompt += `\nMedical history: ${medicalHistory}`;
-    }
+    const model = getModelBasedOnPreference();
+    const prompt = `Based on the following patient information, generate a personalized treatment plan with recommendations for medications, lifestyle changes, and follow-up tests. Include a disclaimer about consulting healthcare professionals.\n\nPatient Information: ${patientInfo}\nSymptoms: ${symptoms}\nMedical History: ${medicalHistory}`;
     
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    return truncateResponse(text, 50, detailedMode);
+    return result.response.text();
   } catch (error) {
     console.error("Error generating treatment plan:", error);
     throw new Error("Failed to generate a treatment plan. Please try again.");
   }
 };
 
-export const searchYouTubeVideos = async (
-  query: string
-): Promise<any[]> => {
-  // This would typically use YouTube API, but for now we'll use mocked data
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Simulate YouTube search results
-  return [
-    {
-      id: "video1",
-      title: `Understanding ${query}: A Medical Perspective`,
-      description: "This video explains the medical aspects and latest research about this condition.",
-      thumbnail: "https://placehold.co/320x180/6D28D9/FFFFFF.png?text=Medical+Video",
-      publishedAt: new Date().toISOString(),
-      channelTitle: "MedEd Channel"
-    },
-    {
-      id: "video2",
-      title: `Living with ${query}: Patient Stories`,
-      description: "Real patients share their experiences and coping strategies.",
-      thumbnail: "https://placehold.co/320x180/2563EB/FFFFFF.png?text=Patient+Stories",
-      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      channelTitle: "Health & Wellness"
-    },
-    {
-      id: "video3",
-      title: `Latest Treatments for ${query}`,
-      description: "Medical experts discuss cutting-edge treatments and therapies.",
-      thumbnail: "https://placehold.co/320x180/DC2626/FFFFFF.png?text=Treatments",
-      publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-      channelTitle: "Medical Innovations"
-    }
-  ];
-};
-
-export const summarizeYouTubeVideo = async (
-  videoId: string,
-  videoTitle: string,
-  detailedMode: boolean = false
-): Promise<string> => {
+// Function to analyze medication safety
+export const analyzeMedication = async (medicationName: string, patientInfo?: string) => {
   try {
-    const prompt = `Summarize a video titled "${videoTitle}". Provide key points discussed in the video.`;
+    const model = getModelBasedOnPreference();
+    const patientContext = patientInfo ? `\nPatient Information: ${patientInfo}` : '';
+    
+    const prompt = `Provide detailed information about this medication including uses, dosage, side effects, contraindications, and potential drug interactions. Format the response with clear sections.${patientContext}\n\nMedication: ${medicationName}`;
     
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    return truncateResponse(text, 50, detailedMode);
+    return result.response.text();
   } catch (error) {
-    console.error("Error summarizing YouTube video:", error);
-    throw new Error("Failed to summarize the YouTube video. Please try again.");
+    console.error("Error analyzing medication:", error);
+    throw new Error("Failed to analyze the medication. Please try again.");
   }
 };
 
-export const getRecommendedVideos = async (
-  recentActivities: string[]
-): Promise<any[]> => {
-  // This would typically use YouTube API, but for now we'll use mocked data
-  await new Promise(resolve => setTimeout(resolve, 1800));
-  
-  // Generate some keywords from recent activities
-  const keywords = recentActivities.join(" ").split(" ").filter(word => word.length > 4);
-  const randomKeyword = keywords.length > 0 
-    ? keywords[Math.floor(Math.random() * keywords.length)] 
-    : "health";
-  
-  // Simulate recommended videos
-  return [
-    {
-      id: "rec1",
-      title: `${randomKeyword} - Understanding Your Health`,
-      description: "A comprehensive guide to understanding this important health topic.",
-      thumbnail: "https://placehold.co/320x180/059669/FFFFFF.png?text=Recommended",
-      publishedAt: new Date().toISOString(),
-      channelTitle: "Health Insights"
-    },
-    {
-      id: "rec2",
-      title: `Doctor's Guide to ${randomKeyword}`,
-      description: "Medical professionals explain everything you need to know.",
-      thumbnail: "https://placehold.co/320x180/0284C7/FFFFFF.png?text=Doctor+Guide",
-      publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      channelTitle: "Medical Channel"
-    },
-    {
-      id: "rec3",
-      title: `Latest Research on ${randomKeyword}`,
-      description: "New studies and findings that could impact your health decisions.",
-      thumbnail: "https://placehold.co/320x180/9333EA/FFFFFF.png?text=Research",
-      publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-      channelTitle: "Science of Medicine"
-    }
-  ];
+// Function to analyze prescription image
+export const analyzePrescriptionImage = async (file: File) => {
+  try {
+    const model = getGeminiVisionModel();
+    const imagePart = await fileToGenerativePart(file);
+    
+    const prompt = "Analyze this prescription image. Identify the medications prescribed, dosages, instructions, and any other relevant information. Also note any potential concerns or interactions between the medications.";
+    
+    const result = await model.generateContent([prompt, imagePart]);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error analyzing prescription image:", error);
+    throw new Error("Failed to analyze the prescription image. Please try again.");
+  }
 };
 
-// Helper function to convert File to GenerativePart
-async function fileToGenerativePart(file: File) {
-  const buffer = await file.arrayBuffer();
-  const byteArray = new Uint8Array(buffer);
-  
-  return {
-    inlineData: {
-      data: Array.from(byteArray),
-      mimeType: file.type
+// Function to search and summarize YouTube medical videos
+export const searchYouTubeVideos = async (query: string, maxResults: number = 5) => {
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
+        "medical " + query
+      )}&maxResults=${maxResults}&type=video&key=${YOUTUBE_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error("YouTube API request failed");
     }
-  };
-}
+    
+    const data = await response.json();
+    return data.items.map((item: any) => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error("Error searching YouTube videos:", error);
+    throw new Error("Failed to search for relevant videos. Please try again.");
+  }
+};
+
+// Function to summarize a YouTube video
+export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string) => {
+  try {
+    const model = getGemini2FlashModel();
+    const prompt = `Summarize the key medical information and takeaways from this YouTube video titled "${videoTitle}". Provide the information in a concise, structured format focusing on the main medical concepts, treatments discussed, and expert advice given.`;
+    
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error summarizing YouTube video:", error);
+    throw new Error("Failed to summarize the video content. Please try again.");
+  }
+};
+
+// Function to analyze health reports (PDF, DOCX, etc.)
+export const analyzeHealthReport = async (file: File) => {
+  try {
+    // For PDFs and DOCXs, we'll extract text if possible or analyze as an image
+    const model = getGemini2Model(); // Use Gemini 2.0 Flash for health reports
+    const imagePart = await fileToGenerativePart(file);
+    
+    const prompt = "Analyze this medical report. Provide a comprehensive summary including key findings, diagnoses, causes, recommended immediate care, treatment plans, and follow-up actions. Format the response with clear sections.";
+    
+    const result = await model.generateContent([prompt, imagePart]);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error analyzing health report:", error);
+    throw new Error("Failed to analyze the health report. Please try again.");
+  }
+};
+
+// Function to get medication recommendations based on symptoms
+export const getMedicationRecommendations = async (symptoms: string, allergies: string = "", currentMedications: string = "") => {
+  try {
+    const model = getModelBasedOnPreference();
+    const prompt = `Based on the following symptoms, suggest appropriate over-the-counter medications or treatments. Include warnings about when to see a doctor and potential drug interactions. Include a disclaimer about consulting healthcare professionals.\n\nSymptoms: ${symptoms}\nAllergies: ${allergies}\nCurrent Medications: ${currentMedications}`;
+    
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("Error getting medication recommendations:", error);
+    throw new Error("Failed to get medication recommendations. Please try again.");
+  }
+};
+
+// Function to get recommended videos based on recent activities
+export const getRecommendedVideos = async (recentActivities: string[]) => {
+  try {
+    // Join recent activities to create a search query
+    const searchQuery = recentActivities.join(", ");
+    return await searchYouTubeVideos(searchQuery);
+  } catch (error) {
+    console.error("Error getting recommended videos:", error);
+    throw new Error("Failed to get recommended videos. Please try again.");
+  }
+};

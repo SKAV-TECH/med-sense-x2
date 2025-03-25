@@ -1,125 +1,98 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Mic, MicOff, InfoIcon } from 'lucide-react';
+import { Send, Mic, MicOff, Info } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { useApp } from '@/context/AppContext';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import ChatBubble from '@/components/UI/ChatBubble';
+import LoadingIndicator from '@/components/UI/LoadingIndicator';
+import { askHealthQuestion } from '@/lib/api';
+import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { ButtonPro } from '@/components/ui/button-pro';
-import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import { truncateResponse } from '@/lib/api';
-import DetailedViewToggle from '@/components/UI/DetailedViewToggle';
-import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 
-interface Message {
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-  originalContent?: string;
+// Add WebSpeech API TypeScript declarations
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
 }
 
-// Define a type for speech recognition errors
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
+interface Message {
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
 }
 
 const ChatAssistant: React.FC = () => {
-  const { userData, addActivity } = useApp();
   const [messages, setMessages] = useState<Message[]>([
     {
-      content: "Hello! I'm your AI medical assistant. How can I help you today?",
+      text: "Hello! I'm your AI medical assistant. How can I help you today? You can ask me about symptoms, medical conditions, preventive healthcare, or general health information.",
       isUser: false,
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDetailedView, setIsDetailedView] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { addActivity } = useApp();
   const { toast } = useToast();
-
-  // Initialize speech recognition
+  
+  // Speech recognition setup
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = SpeechRecognition ? new SpeechRecognition() : null;
   
   if (recognition) {
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
     
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((result: any) => result[0])
-        .map((result) => result.transcript)
-        .join('');
-      
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
       setInput(transcript);
     };
     
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('Speech recognition error', event.error);
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
       setIsListening(false);
       toast({
-        title: "Speech Recognition Error",
-        description: `Error: ${event.message || event.error || "Unknown error"}`,
-        variant: "destructive",
+        title: 'Voice input failed',
+        description: `Error: ${event.error}. Please try again or type your question.`,
+        variant: 'destructive',
       });
     };
   }
-
-  useEffect(() => {
-    // Update message displays when detailed view mode changes
-    if (messages.length > 0) {
-      const updatedMessages = messages.map(msg => {
-        if (msg.isUser || !msg.originalContent) return msg;
-        
-        return {
-          ...msg,
-          content: isDetailedView ? msg.originalContent : truncateResponse(msg.originalContent, 50, false),
-          originalContent: msg.originalContent
-        };
-      });
-      
-      setMessages(updatedMessages);
-    }
-  }, [isDetailedView]);
-
+  
   const toggleListening = () => {
     if (!recognition) {
       toast({
-        title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support speech recognition.",
-        variant: "destructive",
+        title: 'Speech recognition not supported',
+        description: 'Your browser does not support speech recognition. Please type your question instead.',
+        variant: 'destructive',
       });
       return;
     }
     
     if (isListening) {
       recognition.stop();
-      setIsListening(false);
     } else {
       recognition.start();
       setIsListening(true);
     }
   };
-
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
     
-    // Add user message
     const userMessage: Message = {
-      content: input,
+      text: input,
       isUser: true,
       timestamp: new Date(),
     };
@@ -128,198 +101,165 @@ const ChatAssistant: React.FC = () => {
     setInput('');
     setIsLoading(true);
     
-    // Record activity
-    addActivity(`Asked medical assistant: ${input}`);
-    
     try {
-      // Call AI API with user context
-      const userInfo = Object.entries(userData)
-        .filter(([key, value]) => value !== undefined && value !== '')
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ');
+      const response = await askHealthQuestion(input);
       
-      const userContext = userInfo ? `User profile: ${userInfo}` : '';
-      const prompt = `${userContext}\n\nUser query: ${input}`;
+      const aiMessage: Message = {
+        text: response,
+        isUser: false,
+        timestamp: new Date(),
+      };
       
-      // Simulate API response for demonstration
-      setTimeout(() => {
-        const fullResponseContent = generateMockResponse(input);
-        const displayContent = isDetailedView 
-          ? fullResponseContent 
-          : truncateResponse(fullResponseContent, 50, false);
-        
-        const botMessage: Message = {
-          content: displayContent,
-          originalContent: fullResponseContent,
-          isUser: false,
-          timestamp: new Date(),
-        };
-        
-        setMessages((prev) => [...prev, botMessage]);
-        setIsLoading(false);
-      }, 1000);
-      
+      setMessages((prev) => [...prev, aiMessage]);
+      addActivity(`Asked medical assistant: ${input.slice(0, 50)}${input.length > 50 ? '...' : ''}`);
     } catch (error) {
-      console.error('Error sending message:', error);
-      setIsLoading(false);
-      
+      console.error('Error getting response:', error);
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
+        title: 'Failed to get response',
+        description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Mock response generator for demonstration
-  const generateMockResponse = (query: string): string => {
-    if (query.toLowerCase().includes('headache')) {
-      return "Headaches can have many causes, from stress to dehydration, lack of sleep, or more serious conditions. For occasional headaches, rest, adequate hydration, and over-the-counter pain relievers may help. If you're experiencing frequent or severe headaches, it would be advisable to consult with a healthcare provider for a proper diagnosis.";
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
-    
-    if (query.toLowerCase().includes('blood pressure') || query.toLowerCase().includes('hypertension')) {
-      return "Normal blood pressure is typically around 120/80 mmHg. Hypertension (high blood pressure) is generally considered to be 130/80 mmHg or higher. Lifestyle factors like reduced sodium intake, regular exercise, maintaining a healthy weight, limiting alcohol, and stress management can help control blood pressure. If you have concerns about your blood pressure, please consult with your healthcare provider.";
-    }
-    
-    if (query.toLowerCase().includes('diabetes')) {
-      return "Diabetes is a chronic condition affecting how your body processes blood sugar. Type 1 diabetes is an autoimmune condition, while Type 2 is influenced by lifestyle factors. Symptoms may include increased thirst, frequent urination, hunger, fatigue, and blurred vision. Management typically involves monitoring blood sugar, medication, healthy eating, and regular physical activity. Regular consultations with healthcare providers are essential for proper management.";
-    }
-    
-    return "Based on your question, I'd recommend discussing your specific health concerns with a qualified healthcare provider who can give you personalized advice. Remember that while I can provide general information, I can't replace professional medical consultation. Is there anything specific about this condition you'd like to know more about?";
   };
-
-  // Auto-scroll to bottom on new messages
+  
+  // Auto scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Stop listening if component unmounts
-  useEffect(() => {
-    return () => {
-      if (isListening && recognition) {
-        recognition.stop();
-      }
-    };
-  }, [isListening, recognition]);
-
+  
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)]">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex-1 flex flex-col"
-      >
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Medical Assistant</h1>
-          <p className="text-muted-foreground">
-            Consult with our AI medical assistant for health information and guidance
-          </p>
-        </div>
-
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Chat with Medical AI</CardTitle>
-                <CardDescription>
-                  Ask questions about symptoms, conditions, or general health advice
-                </CardDescription>
-              </div>
-              <DetailedViewToggle 
-                isDetailed={isDetailedView}
-                onChange={setIsDetailedView}
-              />
-            </div>
-          </CardHeader>
-          
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div className="flex flex-col">
-              {messages.map((message, index) => (
-                <div key={index} className="mb-4">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Medical Assistant</h1>
+        <p className="text-muted-foreground mt-2">
+          Ask questions about symptoms, conditions, or health concerns
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Card className="lg:col-span-3 shadow-md">
+          <CardContent className="p-0">
+            <div className="flex flex-col h-[600px]">
+              <div className="flex-1 overflow-y-auto p-4">
+                {messages.map((message, index) => (
                   <ChatBubble
-                    message={message.content}
+                    key={index}
                     isUser={message.isUser}
+                    message={message.text}
                     timestamp={message.timestamp}
                   />
-                  {!message.isUser && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                      className="ml-10 mt-1 flex space-x-2"
-                    >
-                      <TextToSpeechButton 
-                        text={message.originalContent || message.content}
-                        size="sm"
-                        showLabel
-                        className="text-xs text-muted-foreground"
-                      />
-                    </motion.div>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-            
-            {isLoading && (
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground animate-pulse">
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                <span>AI is thinking...</span>
+                ))}
+                
+                {isLoading && (
+                  <div className="flex justify-center my-4">
+                    <LoadingIndicator text="AI is thinking..." />
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
               </div>
-            )}
-          </CardContent>
-          
-          <CardFooter className="pt-4 border-t">
-            <div className="flex w-full items-center space-x-2">
-              <ButtonPro
-                variant="outline"
-                size="icon"
-                type="button"
-                onClick={toggleListening}
-                className={isListening ? 'text-primary animate-pulse' : ''}
-              >
-                {isListening ? <Mic /> : <MicOff />}
-              </ButtonPro>
               
-              <Textarea
-                placeholder="Type your health question here..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="flex-1 resize-none"
-                rows={1}
-              />
-              
-              <ButtonPro
-                variant={input.trim() ? 'default' : 'outline'}
-                size="icon"
-                type="button"
-                disabled={!input.trim() || isLoading}
-                onClick={handleSendMessage}
-              >
-                <Send />
-              </ButtonPro>
+              <div className="border-t p-4">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your health question..."
+                    disabled={isLoading}
+                    className="flex-1"
+                  />
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={toggleListening}
+                        disabled={isLoading}
+                      >
+                        {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isListening ? 'Stop voice input' : 'Start voice input'}
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!input.trim() || isLoading}
+                  >
+                    <Send size={18} />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </CardFooter>
+          </CardContent>
         </Card>
         
-        <div className="mt-6 text-sm text-muted-foreground flex items-center">
-          <InfoIcon size={16} className="mr-2" />
-          <p>
-            This AI assistant provides general information only and is not a substitute for professional medical advice.
-          </p>
+        <div className="lg:col-span-1">
+          <Card className="shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center text-primary mb-3">
+                <Info size={18} className="mr-2" />
+                <h3 className="font-medium">How to Use</h3>
+              </div>
+              
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Ask specific questions about symptoms or conditions</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Request preventive healthcare tips</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Inquire about medication information</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Use voice input for hands-free interaction</span>
+                </li>
+              </ul>
+              
+              <div className="mt-4 p-3 bg-accent rounded-md text-xs">
+                <p className="mb-2 font-medium">Important Note:</p>
+                <p>
+                  This AI assistant provides informational guidance only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider for medical concerns.
+                </p>
+              </div>
+              
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">Example Questions:</h4>
+                <div className="space-y-2">
+                  {['What are the symptoms of Type 2 diabetes?', 'How can I reduce high blood pressure naturally?', 'What causes migraines?'].map((question, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02 }}
+                      className="p-2 bg-muted text-xs rounded-md cursor-pointer hover:bg-muted/80"
+                      onClick={() => setInput(question)}
+                    >
+                      {question}
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

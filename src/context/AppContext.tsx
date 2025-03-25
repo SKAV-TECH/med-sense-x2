@@ -13,8 +13,6 @@ type UserData = {
   gender?: string;
   height?: string;
   weight?: string;
-  bloodType?: string;
-  conditions?: string[];
   medicalHistory?: string[];
   allergies?: string[];
   medications?: string[];
