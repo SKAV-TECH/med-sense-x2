@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Save, CheckCircle } from 'lucide-react';
@@ -173,7 +174,7 @@ const UserProfile: React.FC = () => {
                 <Input 
                   id="height"
                   name="height"
-                  placeholder="Your height (e.g., 5'10\" or 178 cm)"
+                  placeholder="Your height (e.g., 5'10&quot; or 178 cm)"
                   value={formData.height}
                   onChange={handleChange}
                 />
@@ -274,4 +275,3 @@ const UserProfile: React.FC = () => {
 };
 
 export default UserProfile;
-
