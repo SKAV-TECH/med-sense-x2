@@ -12,10 +12,12 @@ import {
   BarChart, 
   Settings,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Dashboard' },
@@ -25,6 +27,7 @@ const navItems = [
   { path: '/medication-analyzer', icon: Pill, label: 'Medication Safety' },
   { path: '/video-resources', icon: Video, label: 'Video Resources' },
   { path: '/reports', icon: BarChart, label: 'Health Reports' },
+  { path: '/profile', icon: User, label: 'User Profile' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -32,8 +35,8 @@ const Sidebar: React.FC = () => {
   const { isSidebarOpen, toggleSidebar, theme, toggleTheme } = useApp();
 
   const sidebarVariants = {
-    open: { width: '240px', transition: { duration: 0.3, ease: 'easeInOut' } },
-    closed: { width: '72px', transition: { duration: 0.3, ease: 'easeInOut' } },
+    open: { width: '256px', transition: { duration: 0.3, ease: 'easeInOut' } },
+    closed: { width: '80px', transition: { duration: 0.3, ease: 'easeInOut' } },
   };
 
   const textVariants = {
@@ -46,41 +49,43 @@ const Sidebar: React.FC = () => {
       variants={sidebarVariants}
       initial="open"
       animate={isSidebarOpen ? 'open' : 'closed'}
-      className="fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border z-40 overflow-hidden"
+      className="fixed top-0 left-0 h-full bg-card border-r border-border z-40 overflow-hidden shadow-sm"
     >
       <div className="flex flex-col h-full py-6">
         <div className="px-4 mb-8 flex items-center justify-between">
           <motion.div variants={textVariants} className="flex items-center">
-            <span className="text-xl font-semibold text-primary">MedClauseX</span>
+            <span className="text-xl font-bold text-gradient">MedClauseX</span>
           </motion.div>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={toggleSidebar} 
-            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </Button>
         </div>
 
-        <nav className="flex-1 px-2">
-          <ul className="space-y-2">
+        <nav className="flex-1 px-3">
+          <ul className="space-y-1.5">
             {navItems.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   className={({ isActive }) => 
-                    `flex items-center p-2 rounded-md transition-colors ${
+                    cn(
+                      "flex items-center p-2 rounded-lg transition-colors",
+                      !isSidebarOpen && "justify-center",
                       isActive 
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    }`
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )
                   }
                 >
-                  <item.icon size={20} />
+                  <item.icon size={isSidebarOpen ? 18 : 20} />
                   <motion.span 
                     variants={textVariants}
-                    className="ml-3 whitespace-nowrap"
+                    className="ml-3 whitespace-nowrap font-medium"
                   >
                     {item.label}
                   </motion.span>
@@ -90,12 +95,12 @@ const Sidebar: React.FC = () => {
           </ul>
         </nav>
 
-        <div className="mt-auto px-4">
+        <div className="mt-auto px-4 pt-4 border-t border-border">
           <motion.div
             variants={textVariants}
             className="flex justify-between items-center"
           >
-            <span className="text-sm text-sidebar-foreground">
+            <span className="text-sm text-muted-foreground">
               {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
             </span>
             <Button

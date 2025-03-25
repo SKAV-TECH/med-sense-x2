@@ -1,246 +1,316 @@
 
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { User, Save, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Save, User, UserCheck } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-const UserProfile: React.FC = () => {
-  const { userData, updateUserData, addRecentActivity } = useApp();
+const profileSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  age: z.string().min(1, { message: 'Age is required.' }),
+  gender: z.string().min(1, { message: 'Gender is required.' }),
+  height: z.string().min(1, { message: 'Height is required.' }),
+  weight: z.string().min(1, { message: 'Weight is required.' }),
+  bloodType: z.string().optional(),
+  allergies: z.string().optional(),
+  conditions: z.string().optional(),
+  medications: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const UserProfile = () => {
+  const { userData, setUserData } = useApp();
   const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
-    name: userData.name || '',
-    age: userData.age || '',
-    gender: userData.gender || '',
-    height: userData.height || '',
-    weight: userData.weight || '',
-    medicalHistory: (userData.medicalHistory || []).join(', '),
-    allergies: (userData.allergies || []).join(', '),
-    medications: (userData.medications || []).join(', ')
-  });
-  
-  const [isSaved, setIsSaved] = useState(false);
-  
-  useEffect(() => {
-    // Update form when userData changes
-    setFormData({
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
+
+  // Initialize form with existing user data
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
       name: userData.name || '',
       age: userData.age || '',
       gender: userData.gender || '',
       height: userData.height || '',
       weight: userData.weight || '',
-      medicalHistory: (userData.medicalHistory || []).join(', '),
-      allergies: (userData.allergies || []).join(', '),
-      medications: (userData.medications || []).join(', ')
+      bloodType: userData.bloodType || '',
+      allergies: userData.allergies || '',
+      conditions: userData.conditions || '',
+      medications: userData.medications || '',
+    },
+  });
+
+  useEffect(() => {
+    // Check if this is the first visit
+    const isFirstTime = !localStorage.getItem('userProfileComplete');
+    setIsFirstVisit(isFirstTime);
+  }, []);
+
+  useEffect(() => {
+    // Update form values when userData changes
+    form.reset({
+      name: userData.name || '',
+      age: userData.age || '',
+      gender: userData.gender || '',
+      height: userData.height || '',
+      weight: userData.weight || '',
+      bloodType: userData.bloodType || '',
+      allergies: userData.allergies || '',
+      conditions: userData.conditions || '',
+      medications: userData.medications || '',
     });
-  }, [userData]);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setIsSaved(false);
-  };
-  
-  const handleGenderChange = (value: string) => {
-    setFormData(prev => ({ ...prev, gender: value }));
-    setIsSaved(false);
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  }, [userData, form]);
+
+  const onSubmit = (data: ProfileFormValues) => {
+    // Update context and localStorage
+    setUserData({
+      ...userData,
+      ...data,
+    });
     
-    const updatedData = {
-      name: formData.name,
-      age: formData.age ? parseInt(formData.age.toString()) : undefined,
-      gender: formData.gender,
-      height: formData.height,
-      weight: formData.weight,
-      medicalHistory: formData.medicalHistory ? formData.medicalHistory.split(',').map(item => item.trim()) : [],
-      allergies: formData.allergies ? formData.allergies.split(',').map(item => item.trim()) : [],
-      medications: formData.medications ? formData.medications.split(',').map(item => item.trim()) : []
-    };
+    // Save to localStorage
+    localStorage.setItem('userData', JSON.stringify({
+      ...userData,
+      ...data,
+    }));
     
-    updateUserData(updatedData);
-    addRecentActivity(`Updated user profile information`);
+    // Mark profile as complete
+    localStorage.setItem('userProfileComplete', 'true');
     
-    setIsSaved(true);
-    
+    // Show success toast
     toast({
       title: "Profile Updated",
-      description: "Your profile information has been saved successfully",
+      description: "Your profile information has been saved.",
     });
     
-    setTimeout(() => {
-      setIsSaved(false);
-    }, 3000);
+    setIsFirstVisit(false);
   };
-  
+
   return (
-    <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-lg text-white shadow-lg"
-      >
-        <h1 className="text-3xl font-bold mb-2">User Profile</h1>
-        <p className="text-white/90 max-w-3xl">
-          Update your profile information to personalize your experience and help us provide better health recommendations.
-          Your information will be stored locally on your device.
-        </p>
-      </motion.div>
-      
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card className="shadow-md border-0">
-          <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-indigo-500" />
-              <span>Your Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input 
-                    id="name" 
-                    name="name" 
-                    placeholder="Enter your full name" 
-                    value={formData.name} 
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="age">Age</Label>
-                  <Input 
-                    id="age" 
-                    name="age" 
-                    type="number" 
-                    placeholder="Enter your age" 
-                    value={formData.age} 
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Gender</Label>
-                  <RadioGroup value={formData.gender} onValueChange={handleGenderChange} className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="gender-male">
-                      <Label htmlFor="gender-male">Male</Label></RadioGroupItem>
-                    </div>
-                   <RadioGroup>
-                <div className="flex items-center space-x-2">
-                <RadioGroupItem value="female" id="gender-female" />
-    <Label htmlFor="gender-female">Female</Label>
-  </div>
-</RadioGroup>
- <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="other" id="gender-other" />
-                      <Label htmlFor="gender-other">Other</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="height">Height</Label>
-                 <input 
-              type="text"
-              id="height" 
-              name="height" 
-  placeholder={'e.g., 5\'10" or 178 cm'} 
-  value={formData.height} 
-  onChange={handleChange}
-/>
-
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input 
-                    id="weight" 
-                    name="weight" 
-                    placeholder="e.g., 160 lbs or 73 kg" 
-                    value={formData.weight} 
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="medicalHistory">Medical History (comma separated)</Label>
-                <Textarea 
-                  id="medicalHistory" 
-                  name="medicalHistory" 
-                  placeholder="E.g., diabetes, hypertension, asthma" 
-                  value={formData.medicalHistory} 
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="allergies">Allergies (comma separated)</Label>
-                <Textarea 
-                  id="allergies" 
-                  name="allergies" 
-                  placeholder="E.g., penicillin, peanuts, dust" 
-                  value={formData.allergies} 
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="medications">Current Medications (comma separated)</Label>
-                <Textarea 
-                  id="medications" 
-                  name="medications" 
-                  placeholder="E.g., lisinopril, metformin, albuterol" 
-                  value={formData.medications} 
-                  onChange={handleChange}
-                />
-              </div>
-              
-             <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
-  {isSaved ? (
-    <>
-      <CheckCircle className="mr-2 h-4 w-4" />
-      Saved
-    </>
-  ) : (
-    <>
-      <Save className="mr-2 h-4 w-4" />
-      Save Profile
-    </>
-  )}
-</Button>
-
-            </form>
-          </CardContent>
-        </Card>
-      </motion.div>
-      
-      <div className="mt-8 bg-slate-50 dark:bg-slate-800/20 rounded-lg p-5 border shadow-sm">
-        <h3 className="text-lg font-medium mb-2 text-indigo-700 dark:text-indigo-300">Privacy Note</h3>
-        <p className="text-sm text-muted-foreground">
-          Your information is stored locally on your device and is not sent to any server.
-          This information is used to personalize your experience across the application,
-          such as pre-filling forms in the Treatment Planner. You can reset your data anytime
-          in the Settings page.
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="container max-w-4xl mx-auto"
+    >
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
+          {isFirstVisit ? "Welcome to MedClauseX" : "Your Profile"}
+        </h1>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          {isFirstVisit 
+            ? "Please complete your profile to help us personalize your experience."
+            : "Update your personal information to receive more accurate medical insights."
+          }
         </p>
       </div>
-    </div>
+
+      <Card className="border-border/40 shadow-md">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Personal Information</CardTitle>
+              <CardDescription>
+                This information helps us provide personalized medical insights
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid gap-6 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input placeholder="35" type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bloodType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Blood Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select blood type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="A+">A+</SelectItem>
+                          <SelectItem value="A-">A-</SelectItem>
+                          <SelectItem value="B+">B+</SelectItem>
+                          <SelectItem value="B-">B-</SelectItem>
+                          <SelectItem value="AB+">AB+</SelectItem>
+                          <SelectItem value="AB-">AB-</SelectItem>
+                          <SelectItem value="O+">O+</SelectItem>
+                          <SelectItem value="O-">O-</SelectItem>
+                          <SelectItem value="unknown">Unknown</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="height"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Height (cm)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="170" type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weight (kg)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="70" type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Medical Information</h3>
+                <FormField
+                  control={form.control}
+                  name="allergies"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Allergies</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Penicillin, peanuts, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="conditions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pre-existing Conditions</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Diabetes, hypertension, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medications"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Medications</FormLabel>
+                      <FormControl>
+                        <Input placeholder="List your current medications" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <CardFooter className="flex justify-end px-0 pt-4">
+                <Button type="submit" className="w-full sm:w-auto" size="lg">
+                  <Save className="mr-2 h-4 w-4" />
+                  {isFirstVisit ? "Complete Profile" : "Save Changes"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

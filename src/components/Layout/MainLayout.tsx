@@ -21,13 +21,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }, [isMobile]);
   
+  // Content animation variants
   const contentVariants = {
     expanded: { 
-      marginLeft: isMobile ? '0px' : '240px',
+      marginLeft: isMobile ? '0px' : '256px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     },
     collapsed: { 
-      marginLeft: isMobile ? '0px' : '72px',
+      marginLeft: isMobile ? '0px' : '80px',
       transition: { duration: 0.3, ease: 'easeInOut' }
     }
   };
@@ -49,8 +50,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="container mx-auto px-4 py-6 md:px-6 lg:px-8"
+            transition={{ duration: 0.3 }}
+            className="container mx-auto px-4 py-6 md:px-6 lg:px-8 pt-6"
           >
             {children}
           </motion.div>
