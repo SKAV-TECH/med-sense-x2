@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Save, CheckCircle } from 'lucide-react';
+import { User, Save, CheckCircle, Upload, XCircle, Camera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const UserProfile: React.FC = () => {
   const { userData, updateUserData, addRecentActivity } = useApp();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: userData.name || '',
@@ -26,6 +28,9 @@ const UserProfile: React.FC = () => {
     medications: (userData.medications || []).join(', ')
   });
   
+  const [profileImage, setProfileImage] = useState<string | undefined>(userData.profileImage);
+  const [tempImage, setTempImage] = useState<string | undefined>(undefined);
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   
   useEffect(() => {
@@ -40,6 +45,7 @@ const UserProfile: React.FC = () => {
       allergies: (userData.allergies || []).join(', '),
       medications: (userData.medications || []).join(', ')
     });
+    setProfileImage(userData.profileImage);
   }, [userData]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -53,6 +59,32 @@ const UserProfile: React.FC = () => {
     setIsSaved(false);
   };
   
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setTempImage(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const confirmImageChange = () => {
+    setProfileImage(tempImage);
+    setIsImageDialogOpen(false);
+    setIsSaved(false);
+  };
+  
+  const cancelImageChange = () => {
+    setTempImage(undefined);
+    setIsImageDialogOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -62,13 +94,13 @@ const UserProfile: React.FC = () => {
       gender: formData.gender,
       height: formData.height,
       weight: formData.weight,
+      profileImage: profileImage,
       medicalHistory: formData.medicalHistory ? formData.medicalHistory.split(',').map(item => item.trim()) : [],
       allergies: formData.allergies ? formData.allergies.split(',').map(item => item.trim()) : [],
       medications: formData.medications ? formData.medications.split(',').map(item => item.trim()) : []
     };
     
     updateUserData(updatedData);
-    addRecentActivity(`Updated user profile information`);
     
     setIsSaved(true);
     
@@ -100,8 +132,123 @@ const UserProfile: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="grid gap-6 md:grid-cols-3"
       >
-        <Card className="shadow-md border-0">
+        <Card className="shadow-md border-0 md:col-span-1">
+          <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-indigo-500" />
+              <span>Profile Picture</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 flex flex-col items-center">
+            <div className="relative w-40 h-40 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden mb-4 border-4 border-indigo-100 dark:border-indigo-900">
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <User size={64} className="text-slate-400" />
+                </div>
+              )}
+              
+              <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="absolute bottom-2 right-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg"
+                    onClick={() => setIsImageDialogOpen(true)}
+                  >
+                    <Camera size={18} />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Update Profile Picture</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-40 h-40 rounded-full overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 bg-slate-100 dark:bg-slate-800">
+                        {tempImage ? (
+                          <img 
+                            src={tempImage} 
+                            alt="New profile" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <User size={64} className="text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input 
+                          type="file" 
+                          accept="image/*" 
+                          ref={fileInputRef}
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                          id="profile-upload"
+                        />
+                        <Button 
+                          variant="outline" 
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Select Image
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-4">
+                      <Button variant="outline" onClick={cancelImageChange}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Cancel
+                      </Button>
+                      <Button 
+                        disabled={!tempImage} 
+                        onClick={confirmImageChange}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Save Image
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <h3 className="text-lg font-semibold">{userData.name || 'Your Name'}</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {userData.gender && userData.age ? `${userData.gender}, ${userData.age} years` : 'No details provided'}
+            </p>
+            
+            <div className="w-full space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Height:</span>
+                <span className="font-medium">{userData.height || 'Not specified'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Weight:</span>
+                <span className="font-medium">{userData.weight || 'Not specified'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Allergies:</span>
+                <span className="font-medium">{userData.allergies?.length ? `${userData.allergies.length} listed` : 'None'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Medications:</span>
+                <span className="font-medium">{userData.medications?.length ? `${userData.medications.length} listed` : 'None'}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      
+        <Card className="shadow-md border-0 md:col-span-2">
           <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-indigo-500" />
@@ -138,16 +285,14 @@ const UserProfile: React.FC = () => {
                   <Label>Gender</Label>
                   <RadioGroup value={formData.gender} onValueChange={handleGenderChange} className="flex space-x-4">
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="gender-male">
-                      <Label htmlFor="gender-male">Male</Label></RadioGroupItem>
+                      <RadioGroupItem value="male" id="gender-male" />
+                      <Label htmlFor="gender-male">Male</Label>
                     </div>
-                   <RadioGroup>
-                <div className="flex items-center space-x-2">
-                <RadioGroupItem value="female" id="gender-female" />
-    <Label htmlFor="gender-female">Female</Label>
-  </div>
-</RadioGroup>
- <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="female" id="gender-female" />
+                      <Label htmlFor="gender-female">Female</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="other" id="gender-other" />
                       <Label htmlFor="gender-other">Other</Label>
                     </div>
@@ -156,15 +301,13 @@ const UserProfile: React.FC = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="height">Height</Label>
-                 <input 
-              type="text"
-              id="height" 
-              name="height" 
-  placeholder={'e.g., 5\'10" or 178 cm'} 
-  value={formData.height} 
-  onChange={handleChange}
-/>
-
+                  <Input 
+                    id="height" 
+                    name="height" 
+                    placeholder="e.g., 5'10\" or 178 cm" 
+                    value={formData.height} 
+                    onChange={handleChange}
+                  />
                 </div>
                 
                 <div className="space-y-2">
@@ -212,20 +355,19 @@ const UserProfile: React.FC = () => {
                 />
               </div>
               
-             <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
-  {isSaved ? (
-    <>
-      <CheckCircle className="mr-2 h-4 w-4" />
-      Saved
-    </>
-  ) : (
-    <>
-      <Save className="mr-2 h-4 w-4" />
-      Save Profile
-    </>
-  )}
-</Button>
-
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
+                {isSaved ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Profile
+                  </>
+                )}
+              </Button>
             </form>
           </CardContent>
         </Card>

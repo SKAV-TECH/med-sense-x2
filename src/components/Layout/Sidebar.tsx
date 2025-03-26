@@ -11,18 +11,20 @@ import {
   Video, 
   Settings,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Dashboard' },
+  { path: '/dashboard', icon: Home, label: 'Dashboard' },
   { path: '/image-analysis', icon: FileSearch, label: 'Image Analysis' },
   { path: '/chat-assistant', icon: MessageCircle, label: 'Medical Assistant' },
   { path: '/treatment-planner', icon: Clipboard, label: 'Treatment Planner' },
   { path: '/medication-analyzer', icon: Pill, label: 'Medication Safety' },
   { path: '/video-resources', icon: Video, label: 'Video Resources' },
+  { path: '/profile', icon: User, label: 'Profile' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
