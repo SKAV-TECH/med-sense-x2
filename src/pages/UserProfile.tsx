@@ -304,7 +304,7 @@ const UserProfile: React.FC = () => {
                   <Input 
                     id="height" 
                     name="height" 
-                   placeholder="e.g., 5'10" or 178 cm" 
+                    placeholder="e.g., 5'10\" or 178 cm" 
                     value={formData.height} 
                     onChange={handleChange}
                   />
