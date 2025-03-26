@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Clipboard, ClipboardCheck, Download, Share2, Sparkles, History } from 'lucide-react';
+import { Clipboard, ClipboardCheck, Download, Share2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -20,20 +20,19 @@ import TextToSpeechButton from '@/components/UI/TextToSpeechButton';
 import ConciseToggle from '@/components/UI/ConciseToggle';
 
 const TreatmentPlanner: React.FC = () => {
-  const { addRecentActivity, recentActivities, userData, getActivityHistory } = useApp();
+  const { addRecentActivity, recentActivities } = useApp();
   const { toast } = useToast();
   
   // Separate state for patient information fields
-  const [age, setAge] = useState<string>(userData.age?.toString() || '');
-  const [gender, setGender] = useState<string>(userData.gender || '');
-  const [height, setHeight] = useState<string>(userData.height || '');
-  const [weight, setWeight] = useState<string>(userData.weight || '');
+  const [age, setAge] = useState<string>('');
+  const [gender, setGender] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
   const [symptoms, setSymptoms] = useState('');
-  const [medicalHistory, setMedicalHistory] = useState(userData.medicalHistory?.join(', ') || '');
+  const [medicalHistory, setMedicalHistory] = useState('');
   const [treatmentPlan, setTreatmentPlan] = useState('');
   const [recentActivitiesText, setRecentActivitiesText] = useState('');
   const [useRecentActivities, setUseRecentActivities] = useState(false);
-  const [includeUserProfile, setIncludeUserProfile] = useState(true);
   const [isConcise, setIsConcise] = useState(false);
   
   // Animation variants
@@ -57,60 +56,29 @@ const TreatmentPlanner: React.FC = () => {
   };
   
   useEffect(() => {
-    // Auto-fill form with user profile data when available
-    if (userData) {
-      if (userData.age) setAge(userData.age.toString());
-      if (userData.gender) setGender(userData.gender);
-      if (userData.height) setHeight(userData.height);
-      if (userData.weight) setWeight(userData.weight);
-      if (userData.medicalHistory) setMedicalHistory(userData.medicalHistory.join(', '));
-    }
-  }, [userData]);
-  
-  useEffect(() => {
     if (recentActivities.length > 0) {
-      const activitiesText = getActivityHistory(10);
+      const activitiesText = recentActivities.join('\n');
       setRecentActivitiesText(activitiesText);
     }
-  }, [recentActivities, getActivityHistory]);
+  }, [recentActivities]);
   
   // Combine patient info fields into a single string for the API
   const getPatientInfo = () => {
     const patientInfo = [];
-    
-    // Include user profile data if checkbox is selected
-    if (includeUserProfile) {
-      if (age) patientInfo.push(`Age: ${age}`);
-      if (gender) patientInfo.push(`Gender: ${gender}`);
-      if (height) patientInfo.push(`Height: ${height}`);
-      if (weight) patientInfo.push(`Weight: ${weight}`);
-      
-      // Add medical history if available
-      if (medicalHistory) {
-        patientInfo.push(`Medical History: ${medicalHistory}`);
-      }
-      
-      // Add allergies if available in user profile
-      if (userData.allergies && userData.allergies.length > 0) {
-        patientInfo.push(`Allergies: ${userData.allergies.join(', ')}`);
-      }
-      
-      // Add current medications if available in user profile
-      if (userData.medications && userData.medications.length > 0) {
-        patientInfo.push(`Current Medications: ${userData.medications.join(', ')}`);
-      }
-    }
-    
+    if (age) patientInfo.push(`Age: ${age}`);
+    if (gender) patientInfo.push(`Gender: ${gender}`);
+    if (height) patientInfo.push(`Height: ${height}`);
+    if (weight) patientInfo.push(`Weight: ${weight}`);
     return patientInfo.join(', ');
   };
   
   const { isLoading, refetch } = useQuery({
-    queryKey: ['treatmentPlan', age, gender, height, weight, symptoms, medicalHistory, useRecentActivities, isConcise, includeUserProfile],
+    queryKey: ['treatmentPlan', age, gender, height, weight, symptoms, medicalHistory, useRecentActivities, isConcise],
     queryFn: async () => {
       const patientInfo = getPatientInfo();
       
-      if (!includeUserProfile && (!symptoms && !useRecentActivities)) {
-        throw new Error('Please provide symptoms or enable recent activities if not using profile information.');
+      if (!patientInfo || (!symptoms && !useRecentActivities)) {
+        throw new Error('Patient information and symptoms (or recent activities) are required.');
       }
       
       // Include recent activities in the symptoms if requested
@@ -137,10 +105,10 @@ const TreatmentPlanner: React.FC = () => {
   });
 
   const handleGeneratePlan = async () => {
-    if (includeUserProfile && (!age || !gender)) {
+    if (!age || !gender) {
       toast({
         title: 'Missing Information',
-        description: 'Please provide at least age and gender information when using profile data.',
+        description: 'Please provide at least age and gender information.',
         variant: 'destructive',
       });
       return;
@@ -171,8 +139,6 @@ const TreatmentPlanner: React.FC = () => {
       title: 'Treatment Plan Exported',
       description: 'Your treatment plan has been downloaded.',
     });
-    
-    addRecentActivity("Exported treatment plan");
   };
 
   const handleShare = async () => {
@@ -189,8 +155,6 @@ const TreatmentPlanner: React.FC = () => {
           description: 'Treatment plan has been copied to clipboard.',
         });
       }
-      
-      addRecentActivity("Shared treatment plan");
     } catch (error) {
       console.error('Error sharing:', error);
       toast({
@@ -238,77 +202,64 @@ const TreatmentPlanner: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Switch 
-                    id="use-profile" 
-                    checked={includeUserProfile} 
-                    onCheckedChange={setIncludeUserProfile}
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-2 gap-4"
+              >
+                <motion.div variants={itemVariants} className="space-y-1.5">
+                  <Label htmlFor="age" className="text-slate-700 dark:text-slate-300">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    placeholder="Enter age"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
                   />
-                  <Label htmlFor="use-profile" className="text-sm font-medium cursor-pointer">
-                    Use profile information
-                  </Label>
-                </div>
+                </motion.div>
                 
+                <motion.div variants={itemVariants} className="space-y-1.5">
+                  <Label htmlFor="gender" className="text-slate-700 dark:text-slate-300">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger id="gender" className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="space-y-1.5">
+                  <Label htmlFor="height" className="text-slate-700 dark:text-slate-300">Height (cm/ft)</Label>
+                  <Input
+                    id="height"
+                    placeholder="Enter height"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
+                  />
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="space-y-1.5">
+                  <Label htmlFor="weight" className="text-slate-700 dark:text-slate-300">Weight (kg/lbs)</Label>
+                  <Input
+                    id="weight"
+                    placeholder="Enter weight"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
+                  />
+                </motion.div>
+              </motion.div>
+              
+              <div className="flex justify-end">
                 <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
               </div>
-              
-              {includeUserProfile && (
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-2 gap-4"
-                >
-                  <motion.div variants={itemVariants} className="space-y-1.5">
-                    <Label htmlFor="age" className="text-slate-700 dark:text-slate-300">Age</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      placeholder="Enter age"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
-                    />
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants} className="space-y-1.5">
-                    <Label htmlFor="gender" className="text-slate-700 dark:text-slate-300">Gender</Label>
-                    <Select value={gender} onValueChange={setGender}>
-                      <SelectTrigger id="gender" className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants} className="space-y-1.5">
-                    <Label htmlFor="height" className="text-slate-700 dark:text-slate-300">Height (cm/ft)</Label>
-                    <Input
-                      id="height"
-                      placeholder="Enter height"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
-                    />
-                  </motion.div>
-                  
-                  <motion.div variants={itemVariants} className="space-y-1.5">
-                    <Label htmlFor="weight" className="text-slate-700 dark:text-slate-300">Weight (kg/lbs)</Label>
-                    <Input
-                      id="weight"
-                      placeholder="Enter weight"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      className="border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
-                    />
-                  </motion.div>
-                </motion.div>
-              )}
               
               <div className="flex items-center justify-between">
                 <Label htmlFor="symptoms" className="text-slate-700 dark:text-slate-300">Symptoms</Label>
@@ -318,8 +269,8 @@ const TreatmentPlanner: React.FC = () => {
                   className={useRecentActivities ? "bg-violet-600 hover:bg-violet-700" : "border-violet-200 text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-400 dark:hover:bg-violet-900/20"}
                   onClick={() => setUseRecentActivities(!useRecentActivities)}
                 >
-                  <History className="mr-1 h-4 w-4" />
-                  {useRecentActivities ? "Using Activity History" : "Use Activity History"}
+                  <Sparkles className="mr-1 h-4 w-4" />
+                  {useRecentActivities ? "Using Recent Activities" : "Use Recent Activities"}
                 </Button>
               </div>
               
@@ -330,8 +281,8 @@ const TreatmentPlanner: React.FC = () => {
                   className="p-3 bg-violet-50 dark:bg-violet-900/10 rounded border border-violet-100 dark:border-violet-900/50"
                 >
                   <h4 className="text-sm font-medium mb-2 text-violet-700 dark:text-violet-300">Recent Activities</h4>
-                  <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400 max-h-40 overflow-y-auto">
-                    {recentActivities.slice(0, 10).map((activity, index) => (
+                  <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+                    {recentActivities.slice(0, 5).map((activity, index) => (
                       <li key={index} className="flex items-start">
                         <span className="inline-block w-4 h-4 bg-violet-100 dark:bg-violet-800 rounded-full flex-shrink-0 mr-2 text-center text-violet-700 dark:text-violet-300 text-[10px] leading-4">{index + 1}</span>
                         {activity}
@@ -347,20 +298,19 @@ const TreatmentPlanner: React.FC = () => {
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
                 className="min-h-[100px] border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
+                disabled={useRecentActivities && recentActivities.length > 0}
               />
               
-              {!includeUserProfile && (
-                <motion.div variants={itemVariants}>
-                  <Label htmlFor="medicalHistory" className="text-slate-700 dark:text-slate-300">Medical History (Optional)</Label>
-                  <Textarea
-                    id="medicalHistory"
-                    placeholder="Any previous conditions, surgeries, or relevant medical history..."
-                    value={medicalHistory}
-                    onChange={(e) => setMedicalHistory(e.target.value)}
-                    className="mt-1 min-h-[100px] border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
-                  />
-                </motion.div>
-              )}
+              <motion.div variants={itemVariants}>
+                <Label htmlFor="medicalHistory" className="text-slate-700 dark:text-slate-300">Medical History (Optional)</Label>
+                <Textarea
+                  id="medicalHistory"
+                  placeholder="Any previous conditions, surgeries, or relevant medical history..."
+                  value={medicalHistory}
+                  onChange={(e) => setMedicalHistory(e.target.value)}
+                  className="mt-1 min-h-[100px] border-slate-200 dark:border-slate-700 focus:border-violet-500 focus:ring-violet-500"
+                />
+              </motion.div>
               
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -368,7 +318,7 @@ const TreatmentPlanner: React.FC = () => {
               >
                 <Button 
                   onClick={handleGeneratePlan} 
-                  disabled={isLoading || (includeUserProfile && (!age || !gender)) || (!symptoms && !useRecentActivities)}
+                  disabled={isLoading || !age || !gender || (!symptoms && !useRecentActivities)}
                   className="w-full mt-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-violet-500/25"
                 >
                   {isLoading ? (

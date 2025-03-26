@@ -13,7 +13,6 @@ type UserData = {
   gender?: string;
   height?: string;
   weight?: string;
-  profileImage?: string;
   medicalHistory?: string[];
   allergies?: string[];
   medications?: string[];
@@ -32,7 +31,6 @@ interface AppContextProps {
   encryptData: (data: any) => string;
   decryptData: (encryptedData: string) => any;
   resetUserData: () => void;
-  getActivityHistory: (count?: number) => string;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -83,11 +81,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update user data function
   const updateUserData = (data: Partial<UserData>) => {
     setUserData((prevData) => ({ ...prevData, ...data }));
-    // Add an activity for profile updates
-    if (Object.keys(data).length > 0) {
-      const updatedFields = Object.keys(data).join(', ');
-      addActivity(`Updated profile information: ${updatedFields}`);
-    }
   };
 
   // Reset user data function
@@ -96,26 +89,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRecentActivities([]);
     localStorage.removeItem('userData');
     localStorage.removeItem('recentActivities');
-    addActivity("Reset all user data");
+    window.location.reload();
   };
 
   // Add activity function
   const addActivity = (activity: string) => {
-    const timestamp = new Date().toISOString();
-    const activityWithTimestamp = `[${new Date().toLocaleString()}] ${activity}`;
     setRecentActivities((prevActivities) => {
-      const newActivities = [activityWithTimestamp, ...prevActivities.slice(0, 19)]; // Keep only the 20 most recent activities
+      const newActivities = [activity, ...prevActivities.slice(0, 9)]; // Keep only the 10 most recent activities
       return newActivities;
     });
   };
 
   // Alias for addActivity to maintain backward compatibility
   const addRecentActivity = addActivity;
-
-  // Get formatted activity history text
-  const getActivityHistory = (count: number = 10): string => {
-    return recentActivities.slice(0, count).join('\n');
-  };
 
   // Toggle sidebar function
   const toggleSidebar = () => {
@@ -169,7 +155,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         encryptData,
         decryptData,
         resetUserData,
-        getActivityHistory,
       }}
     >
       {children}
