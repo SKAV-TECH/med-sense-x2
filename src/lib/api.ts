@@ -106,7 +106,7 @@ export const askHealthQuestion = async (question: string, concise: boolean = fal
   try {
     const model = getModelBasedOnPreference();
     const prompt = `
-    As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice.if user enter text in telugu  language the response should be in telugu language,if user enters in hindi language  then response should be in hindi language.\n\nQuestion: ${question}`;
+    As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable..generate responce based on user language if your gives telugu generate responce in telugu,if user gives in hindhi generate responc ein hindhilike that continueRemember to mention that this is not a substitute for professional medical advice.if user enter text in telugu  language the response should be in telugu language,if user enters in hindi language  then response should be in hindi language.\n\nQuestion: ${question}`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();
