@@ -1,11 +1,11 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Mic, MicOff, Info } from 'lucide-react';
+import { Send, Mic, MicOff, Info, Globe } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChatBubble from '@/components/UI/ChatBubble';
 import LoadingIndicator from '@/components/UI/LoadingIndicator';
 import { askHealthQuestion } from '@/lib/api';
@@ -32,22 +32,105 @@ interface Message {
   timestamp: Date;
 }
 
-const ChatAssistant: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      text: "Hello! I'm your AI medical assistant. How can I help you today? You can ask me about symptoms, medical conditions, preventive healthcare, or general health information.",
-      isUser: false,
-      timestamp: new Date(),
+// Language configuration
+const LANGUAGES = {
+  english: {
+    code: 'en-US',
+    name: 'English',
+    welcomeMessage: "Hello! I'm your AI medical assistant. How can I help you today? You can ask me about symptoms, medical conditions, preventive healthcare, or general health information.",
+    nonMedicalToast: {
+      title: 'Non-medical query detected',
+      description: 'I can only answer medical-related questions. Please ask me about health, symptoms, or medical conditions.',
     },
-  ]);
+    voiceInputToast: {
+      title: 'Speech recognition not supported',
+      description: 'Your browser does not support speech recognition. Please type your question instead.',
+    },
+    errorToast: {
+      title: 'Failed to get response',
+      description: 'Something went wrong. Please try again.',
+    },
+    placeholderText: 'Type your health question...',
+  },
+  telugu: {
+    code: 'te-IN',
+    name: 'Telugu',
+    welcomeMessage: "నమస్కారం! నేను మీ AI వైद్య సహాయకుడిని. నేడు నేను మీకు ఎలా సహాయం చేయగలను? లక్షణాలు, వైद్య పరిస్థితులు, ప్రారంభ ఆరోగ్య సంరక్షణ లేదా సాధారణ ఆరోగ్య సమాచారం గురించి అడగండి.",
+    nonMedicalToast: {
+      title: 'వైద్య వ్యతిరేక ప్రశ్న గుర్తించబడింది',
+      description: 'నేను కేవలం వైద్య సంబంధిత ప్రశ్నలకు సమాధానం ఇవ్వగలను. ఆరోగ్యం, లక్షణాలు లేదా వైద్య పరిస్థితుల గురించి అడగండి.',
+    },
+    voiceInputToast: {
+      title: 'స్పీచ్ గుర్తింపు అందుబాటులో లేదు',
+      description: 'మీ బ్రౌజర్ స్పీచ్ గుర్తింపుకు అనుమతి ఇవ్వలేదు. దయచేసి మీ ప్రశ్నను టైప్ చేయండి.',
+    },
+    errorToast: {
+      title: 'సమాధానం పొందడంలో వైఫల్యం',
+      description: 'ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.',
+    },
+    placeholderText: 'మీ ఆరోగ్య ప్రశ్నను టైప్ చేయండి...',
+  },
+  hindi: {
+    code: 'hi-IN',
+    name: 'Hindi',
+    welcomeMessage: "नमस्ते! मैं आपका AI चिकित्सा सहायक हूँ। आज मैं आपकी कैसे मदद कर सकता हूँ? आप लक्षणों, चिकित्सा स्थितियों, निवारक स्वास्थ्य सेवा या सामान्य स्वास्थ्य जानकारी के बारे में पूछ सकते हैं।",
+    nonMedicalToast: {
+      title: 'गैर-चिकित्सा प्रश्न का पता चला',
+      description: 'मैं केवल चिकित्सा संबंधित प्रश्नों का उत्तर दे सकता हूँ। कृपया स्वास्थ्य, लक्षणों या चिकित्सा स्थितियों के बारे में पूछें।',
+    },
+    voiceInputToast: {
+      title: 'स्पीच पहचान समर्थित नहीं है',
+      description: 'आपका ब्राउज़र स्पीच पहचान का समर्थन नहीं करता। कृपया अपना प्रश्न टाइप करें।',
+    },
+    errorToast: {
+      title: 'प्रतिक्रिया प्राप्त करने में विफल',
+      description: 'कुछ गलत हो गया। कृपया फिर से प्रयास करें।',
+    },
+    placeholderText: 'अपना स्वास्थ्य प्रश्न टाइप करें...',
+  },
+  tamil: {
+    code: 'ta-IN',
+    name: 'Tamil',
+    welcomeMessage: "வணக்கம்! நான் உங்கள் AI மருத்துவ உதவி. இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்? நீங்கள் அறிகுறிகள், மருத்துவ நிலைமைகள், தடுப்பு சுகாதார அல்லது பொது சுகாதார தகவல் பற்றி கேட்கலாம்.",
+    nonMedicalToast: {
+      title: 'மருத்துவ அல்லாத கேள்வி கண்டறியப்பட்டது',
+      description: 'நான் மருத்துவ தொடர்பான கேள்விகளுக்கு மட்டுமே பதிலளிக்க முடியும். சுகாதாரம், அறிகுறிகள் அல்லது மருத்துவ நிலைமைகள் பற்றி கேட்கவும்.',
+    },
+    voiceInputToast: {
+      title: 'பேச்சு அங்கீகாரம் ஆதரிக்கப்படவில்லை',
+      description: 'உங்கள் மேலாளர் பேச்சு அங்கீகாரத்தை ஆதரிக்கவில்லை. தயவுசெய்து உங்கள் கேள்வியை தட்டச்சு செய்யவும்.',
+    },
+    errorToast: {
+      title: 'பதிலைப் பெற முடியவில்லை',
+      description: 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.',
+    },
+    placeholderText: 'உங்கள் சுகாதார கேள்வியை தட்டச்சு செய்யவும்...',
+  }
+};
+
+type LanguageKey = keyof typeof LANGUAGES;
+
+const ChatAssistant: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isConcise, setIsConcise] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<LanguageKey>('english');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addActivity } = useApp();
   const { toast } = useToast();
+  
+  // Initial welcome message based on selected language
+  useEffect(() => {
+    const languageConfig = LANGUAGES[currentLanguage];
+    setMessages([{
+      text: languageConfig.welcomeMessage,
+      isUser: false,
+      timestamp: new Date(),
+    }]);
+  }, [currentLanguage]);
   
   // Speech recognition setup
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -55,7 +138,7 @@ const ChatAssistant: React.FC = () => {
   
   if (recognition) {
     recognition.continuous = false;
-    recognition.lang = 'en-US';
+    recognition.lang = LANGUAGES[currentLanguage].code;
     
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -69,9 +152,10 @@ const ChatAssistant: React.FC = () => {
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
+      const languageConfig = LANGUAGES[currentLanguage];
       toast({
-        title: 'Voice input failed',
-        description: `Error: ${event.error}. Please try again or type your question.`,
+        title: languageConfig.voiceInputToast.title,
+        description: languageConfig.voiceInputToast.description,
         variant: 'destructive',
       });
     };
@@ -79,9 +163,10 @@ const ChatAssistant: React.FC = () => {
   
   const toggleListening = () => {
     if (!recognition) {
+      const languageConfig = LANGUAGES[currentLanguage];
       toast({
-        title: 'Speech recognition not supported',
-        description: 'Your browser does not support speech recognition. Please type your question instead.',
+        title: languageConfig.voiceInputToast.title,
+        description: languageConfig.voiceInputToast.description,
         variant: 'destructive',
       });
       return;
@@ -90,6 +175,7 @@ const ChatAssistant: React.FC = () => {
     if (isListening) {
       recognition.stop();
     } else {
+      recognition.lang = LANGUAGES[currentLanguage].code;
       recognition.start();
       setIsListening(true);
     }
@@ -108,10 +194,12 @@ const ChatAssistant: React.FC = () => {
       input.toLowerCase().includes(keyword)
     );
     
+    const languageConfig = LANGUAGES[currentLanguage];
+    
     if (!isMedicalQuery) {
       toast({
-        title: 'Non-medical query detected',
-        description: 'I can only answer medical-related questions. Please ask me about health, symptoms, or medical conditions.',
+        title: languageConfig.nonMedicalToast.title,
+        description: languageConfig.nonMedicalToast.description,
         variant: 'destructive',
       });
       return;
@@ -128,7 +216,8 @@ const ChatAssistant: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const response = await askHealthQuestion(input, isConcise);
+      // Modify askHealthQuestion to accept language parameter
+      const response = await askHealthQuestion(input, isConcise, currentLanguage);
       
       const aiMessage: Message = {
         text: response,
@@ -137,12 +226,12 @@ const ChatAssistant: React.FC = () => {
       };
       
       setMessages((prev) => [...prev, aiMessage]);
-      addActivity(`Asked medical assistant: ${input.slice(0, 50)}${input.length > 50 ? '...' : ''}`);
+      addActivity(`Asked medical assistant in ${languageConfig.name}: ${input.slice(0, 50)}${input.length > 50 ? '...' : ''}`);
     } catch (error) {
       console.error('Error getting response:', error);
       toast({
-        title: 'Failed to get response',
-        description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+        title: languageConfig.errorToast.title,
+        description: languageConfig.errorToast.description,
         variant: 'destructive',
       });
     } finally {
@@ -165,11 +254,29 @@ const ChatAssistant: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Medical Assistant</h1>
+        <h1 className="text-3xl font-bold flex items-center">
+          <Globe className="mr-2" /> Medical Assistant
+        </h1>
         <p className="text-muted-foreground mt-2">
           Ask questions about symptoms, conditions, or health concerns
         </p>
       </div>
+      
+      {/* Language Selection Tabs */}
+      <Tabs 
+        defaultValue="english" 
+        value={currentLanguage}
+        onValueChange={(value: LanguageKey) => setCurrentLanguage(value)}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-4">
+          {Object.keys(LANGUAGES).map((lang) => (
+            <TabsTrigger key={lang} value={lang}>
+              {LANGUAGES[lang as LanguageKey].name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Card className="lg:col-span-3 shadow-md">
@@ -206,7 +313,7 @@ const ChatAssistant: React.FC = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your health question..."
+                    placeholder={LANGUAGES[currentLanguage].placeholderText}
                     disabled={isLoading}
                     className="flex-1"
                   />
@@ -250,15 +357,15 @@ const ChatAssistant: React.FC = () => {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
+                  <span>Select your preferred language</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
                   <span>Ask specific questions about symptoms or conditions</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
                   <span>Request preventive healthcare tips</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>Inquire about medication information</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
