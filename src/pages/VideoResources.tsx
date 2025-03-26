@@ -96,6 +96,9 @@ const VideoResources: React.FC = () => {
       
       // Pass the YouTube URL to the API
       const videoUrl = `https://www.youtube.com/watch?v=${selectedVideo.id}`;
+      
+      // Fix: Ensure we're passing the correct number of arguments to match the API function signature
+      // The function expects either 3 arguments (id, title, isConcise) or with the optional 4th parameter (videoUrl)
       const summary = await summarizeYouTubeVideo(
         selectedVideo.id, 
         selectedVideo.title, 

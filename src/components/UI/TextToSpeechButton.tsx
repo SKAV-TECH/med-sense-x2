@@ -21,7 +21,11 @@ const TextToSpeechButton: React.FC<TextToSpeechButtonProps> = ({ text, className
       stop();
     } else {
       setIsLoading(true);
-      speak(text);
+      try {
+        speak(text);
+      } catch (error) {
+        console.error('Failed to speak text:', error);
+      }
       // Simulate a brief loading state
       setTimeout(() => setIsLoading(false), 500);
     }
