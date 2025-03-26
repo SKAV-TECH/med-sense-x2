@@ -213,10 +213,18 @@ export const searchYouTubeVideos = async (query: string, maxResults: number = 5)
   }
 };
 
+// Updated function to summarize YouTube videos - removed the videoUrl parameter
 export const summarizeYouTubeVideo = async (videoId: string, videoTitle: string, concise: boolean = false) => {
   try {
     const model = getGemini2FlashModel();
-    const prompt = `Summarize the key medical information and takeaways from this YouTube video titled "${videoTitle}". Provide the information in a concise, structured format focusing on the main medical concepts, treatments discussed, and expert advice given.`;
+    
+    // Create a more detailed prompt that includes the video data for better summaries
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const prompt = `Summarize the key medical information from this YouTube video titled "${videoTitle}" (${videoUrl}). 
+    Format your response with proper headings, bullet points, and paragraphs for readability.
+    Break down the key medical concepts, treatments, and advice mentioned in this video.
+    Avoid using markdown formatting like **, ##, or \`\`\` in your response - use proper HTML formatting instead.
+    Use <h3> for section headings, <b> for important terms, <ul><li> for bullet points, and <p> for paragraphs.`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -35,7 +34,6 @@ const VideoResources: React.FC = () => {
   const [videoSummary, setVideoSummary] = useState('');
   const [isConcise, setIsConcise] = useState(false);
   
-  // Search videos query
   const { isLoading: isSearching, refetch: searchVideos } = useQuery({
     queryKey: ['searchVideos', searchQuery],
     queryFn: async () => {
@@ -61,7 +59,6 @@ const VideoResources: React.FC = () => {
     }
   });
   
-  // Recommend videos query
   const { isLoading: isRecommending, refetch: fetchRecommendedVideos } = useQuery({
     queryKey: ['recommendVideos', recentActivities],
     queryFn: async () => {
@@ -86,7 +83,6 @@ const VideoResources: React.FC = () => {
     }
   });
   
-  // Summarize video query
   const { isLoading: isSummarizing, refetch: summarizeVideo } = useQuery({
     queryKey: ['summarizeVideo', selectedVideo?.id, isConcise],
     queryFn: async () => {
@@ -94,16 +90,10 @@ const VideoResources: React.FC = () => {
         throw new Error('No video selected');
       }
       
-      // Pass the YouTube URL to the API
-      const videoUrl = `https://www.youtube.com/watch?v=${selectedVideo.id}`;
-      
-      // Fix: Ensure we're passing the correct number of arguments to match the API function signature
-      // The function expects either 3 arguments (id, title, isConcise) or with the optional 4th parameter (videoUrl)
       const summary = await summarizeYouTubeVideo(
         selectedVideo.id, 
         selectedVideo.title, 
-        isConcise,
-        videoUrl
+        isConcise
       );
       
       setVideoSummary(summary);
@@ -148,13 +138,11 @@ const VideoResources: React.FC = () => {
   const handleToggleConcise = (value: boolean) => {
     setIsConcise(value);
     if (selectedVideo && videoSummary) {
-      // Re-summarize the video with the new concise setting
       summarizeVideo();
     }
   };
   
   useEffect(() => {
-    // Load recommended videos on component mount
     if (recentActivities.length > 0) {
       fetchRecommendedVideos();
     }
@@ -171,7 +159,6 @@ const VideoResources: React.FC = () => {
     'sleep apnea'
   ];
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -191,7 +178,6 @@ const VideoResources: React.FC = () => {
     }
   };
 
-  // Typwriter effect for empty state
   const [typingText, setTypingText] = useState("");
   const fullText = "Select a video from the list to view and get an AI-generated summary of its content.";
   

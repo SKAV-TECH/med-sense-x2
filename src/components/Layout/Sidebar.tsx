@@ -9,7 +9,6 @@ import {
   Clipboard, 
   Pill, 
   Video, 
-  BarChart, 
   Settings,
   Menu,
   X
@@ -24,7 +23,6 @@ const navItems = [
   { path: '/treatment-planner', icon: Clipboard, label: 'Treatment Planner' },
   { path: '/medication-analyzer', icon: Pill, label: 'Medication Safety' },
   { path: '/video-resources', icon: Video, label: 'Video Resources' },
-  { path: '/reports', icon: BarChart, label: 'Health Reports' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
