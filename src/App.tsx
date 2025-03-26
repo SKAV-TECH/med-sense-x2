@@ -12,10 +12,10 @@ import ChatAssistant from "@/pages/ChatAssistant";
 import TreatmentPlanner from "@/pages/TreatmentPlanner";
 import MedicationAnalyzer from "@/pages/MedicationAnalyzer";
 import VideoResources from "@/pages/VideoResources";
-import HealthReports from "@/pages/HealthReports";
 import UserProfile from "@/pages/UserProfile";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
+import LandingPage from "@/pages/LandingPage";
 
 // Initialize the query client
 const queryClient = new QueryClient();
@@ -28,7 +28,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={
               <MainLayout>
                 <Dashboard />
               </MainLayout>
@@ -56,11 +57,6 @@ const App = () => (
             <Route path="/video-resources" element={
               <MainLayout>
                 <VideoResources />
-              </MainLayout>
-            } />
-            <Route path="/reports" element={
-              <MainLayout>
-                <HealthReports />
               </MainLayout>
             } />
             <Route path="/profile" element={
