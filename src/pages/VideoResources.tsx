@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Youtube, ExternalLink, PlaySquare } from 'lucide-react';
+import { Search, Youtube, ExternalLink, PlaySquare, Video } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,15 @@ const VideoResources: React.FC = () => {
         throw new Error('No video selected');
       }
       
-      const summary = await summarizeYouTubeVideo(selectedVideo.id, selectedVideo.title, isConcise);
+      // Pass the YouTube URL to the API
+      const videoUrl = `https://www.youtube.com/watch?v=${selectedVideo.id}`;
+      const summary = await summarizeYouTubeVideo(
+        selectedVideo.id, 
+        selectedVideo.title, 
+        isConcise,
+        videoUrl
+      );
+      
       setVideoSummary(summary);
       addRecentActivity(`Watched medical video: ${selectedVideo.title}`);
       return summary;
@@ -132,7 +140,6 @@ const VideoResources: React.FC = () => {
   const handleSelectVideo = (video: Video) => {
     setSelectedVideo(video);
     setVideoSummary('');
-    summarizeVideo();
   };
   
   const handleToggleConcise = (value: boolean) => {
@@ -161,12 +168,52 @@ const VideoResources: React.FC = () => {
     'sleep apnea'
   ];
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1 
+      } 
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  // Typwriter effect for empty state
+  const [typingText, setTypingText] = useState("");
+  const fullText = "Select a video from the list to view and get an AI-generated summary of its content.";
+  
+  useEffect(() => {
+    if (!selectedVideo && videos.length > 0) {
+      let i = 0;
+      const typingInterval = setInterval(() => {
+        if (i < fullText.length) {
+          setTypingText(fullText.substring(0, i + 1));
+          i++;
+        } else {
+          clearInterval(typingInterval);
+        }
+      }, 40);
+      
+      return () => clearInterval(typingInterval);
+    }
+  }, [videos, selectedVideo]);
+
   return (
     <div className="space-y-8">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 rounded-lg text-white shadow-lg"
+        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 p-6 rounded-lg text-white shadow-lg"
       >
         <h1 className="text-3xl font-bold mb-2">Medical Video Resources</h1>
         <p className="text-white/90 max-w-3xl">
@@ -177,8 +224,8 @@ const VideoResources: React.FC = () => {
       
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <Card className="shadow-md border-0">
-            <CardHeader className="bg-slate-50 dark:bg-slate-800/50">
+          <Card className="shadow-md border-0 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <CardTitle className="flex items-center gap-2">
                 <Search className="h-5 w-5 text-blue-500" />
                 <span>Find Medical Videos</span>
@@ -194,96 +241,133 @@ const VideoResources: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search medical videos..."
-                    className="border-slate-200 dark:border-slate-700"
+                    className="border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500"
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
-                <Button 
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSearching ? <LoadingIndicator size="sm" /> : <Search className="h-4 w-4 mr-2" />}
-                  Search
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300"
+                  >
+                    {isSearching ? <LoadingIndicator size="sm" /> : <Search className="h-4 w-4 mr-2" />}
+                    Search
+                  </Button>
+                </motion.div>
               </div>
               
-              <div className="mt-4">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="mt-4"
+              >
                 <h3 className="text-sm font-medium mb-2">Popular Searches:</h3>
                 <div className="flex flex-wrap gap-2">
                   {popularSearches.map((term) => (
-                    <Badge 
-                      key={term}
-                      variant="outline"
-                      className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 dark:border-blue-800"
-                      onClick={() => {
-                        setSearchQuery(term);
-                        setTimeout(() => handleSearch(), 100);
-                      }}
-                    >
-                      {term}
-                    </Badge>
+                    <motion.div key={term} variants={itemVariants}>
+                      <Badge 
+                        variant="outline"
+                        className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 dark:border-blue-800 transition-all duration-300"
+                        onClick={() => {
+                          setSearchQuery(term);
+                          setTimeout(() => handleSearch(), 100);
+                        }}
+                      >
+                        {term}
+                      </Badge>
+                    </motion.div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
               <div className="mt-5 flex justify-between items-center">
                 <h3 className="text-sm font-medium">Recommended For You:</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRecommend}
-                  disabled={isRecommending || recentActivities.length === 0}
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
-                >
-                  {isRecommending ? <LoadingIndicator size="sm" /> : <Youtube className="h-4 w-4 mr-2" />}
-                  Get Recommendations
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRecommend}
+                    disabled={isRecommending || recentActivities.length === 0}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
+                  >
+                    {isRecommending ? <LoadingIndicator size="sm" /> : <Youtube className="h-4 w-4 mr-2" />}
+                    Get Recommendations
+                  </Button>
+                </motion.div>
               </div>
             </CardContent>
           </Card>
           
-          <div className="space-y-3">
-            {videos.length > 0 ? (
-              videos.map((video) => (
-                <Card 
-                  key={video.id} 
-                  className={`cursor-pointer overflow-hidden transition-all hover:shadow-md ${
-                    selectedVideo?.id === video.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                  onClick={() => handleSelectVideo(video)}
-                >
-                  <div className="flex md:flex-row flex-col">
-                    <div className="md:w-[180px] w-full h-[120px] bg-slate-100 dark:bg-slate-800">
-                      <img 
-                        src={video.thumbnail} 
-                        alt={video.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-4 flex-1">
-                      <h3 className="font-medium text-sm line-clamp-2 mb-1">{video.title}</h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{video.description}</p>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="text-xs text-muted-foreground">{video.channelTitle}</span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {new Date(video.publishedAt).toLocaleDateString()}
-                        </Badge>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3"
+          >
+            <AnimatePresence>
+              {videos.length > 0 ? (
+                videos.map((video) => (
+                  <motion.div
+                    key={video.id}
+                    variants={itemVariants}
+                    layout
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Card 
+                      className={`cursor-pointer overflow-hidden transition-all hover:shadow-md ${
+                        selectedVideo?.id === video.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200 dark:border-slate-700'
+                      }`}
+                      onClick={() => handleSelectVideo(video)}
+                    >
+                      <div className="flex md:flex-row flex-col">
+                        <div className="md:w-[180px] w-full h-[120px] bg-slate-100 dark:bg-slate-800 relative overflow-hidden group">
+                          <img 
+                            src={video.thumbnail} 
+                            alt={video.title} 
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <PlaySquare className="h-10 w-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                        <div className="p-4 flex-1">
+                          <h3 className="font-medium text-sm line-clamp-2 mb-1">{video.title}</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{video.description}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <span className="text-xs text-muted-foreground">{video.channelTitle}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {new Date(video.publishedAt).toLocaleDateString()}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-12 border rounded-lg border-dashed bg-slate-50 dark:bg-slate-800/20">
-                <Youtube className="h-10 w-10 mx-auto text-slate-400 mb-3" />
-                <h3 className="text-lg font-medium mb-1">No Videos Found</h3>
-                <p className="text-sm text-muted-foreground">
-                  Search for videos or get recommendations based on your recent activities.
-                </p>
-              </div>
-            )}
-          </div>
+                    </Card>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-12 border rounded-lg border-dashed bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10"
+                >
+                  <Youtube className="h-16 w-16 mx-auto text-indigo-400 mb-3" />
+                  <h3 className="text-lg font-medium mb-1 text-indigo-600 dark:text-indigo-400">No Videos Found</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Search for videos or get recommendations based on your recent activities.
+                  </p>
+                  <motion.div
+                    className="mt-4"
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                  >
+                    <Search className="h-5 w-5 mx-auto text-indigo-400" />
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
         
         <div>
@@ -293,7 +377,7 @@ const VideoResources: React.FC = () => {
               animate={{ opacity: 1 }}
               className="space-y-4"
             >
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
                 <iframe
                   width="100%"
                   height="100%"
@@ -305,8 +389,8 @@ const VideoResources: React.FC = () => {
                 ></iframe>
               </div>
               
-              <Card className="shadow-md border-0">
-                <CardHeader className="bg-slate-50 dark:bg-slate-800/50 pb-3">
+              <Card className="shadow-md border-0 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{selectedVideo.title}</CardTitle>
                     <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
@@ -318,7 +402,7 @@ const VideoResources: React.FC = () => {
                     href={`https://www.youtube.com/watch?v=${selectedVideo.id}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center mb-3"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center mb-3"
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />
                     Watch on YouTube
@@ -328,8 +412,8 @@ const VideoResources: React.FC = () => {
                   
                   {isSummarizing ? (
                     <div className="py-12 flex flex-col items-center">
-                      <LoadingIndicator size="lg" className="mb-3" />
-                      <p className="text-sm text-muted-foreground">Generating video summary...</p>
+                      <LoadingIndicator size="lg" className="mb-3 text-indigo-500" />
+                      <p className="text-sm text-muted-foreground animate-pulse">Generating video summary...</p>
                     </div>
                   ) : videoSummary ? (
                     <div className="relative">
@@ -346,25 +430,57 @@ const VideoResources: React.FC = () => {
                 </CardContent>
                 {!videoSummary && !isSummarizing && (
                   <CardFooter className="px-6 pb-6">
-                    <Button 
-                      onClick={() => summarizeVideo()}
-                      className="bg-blue-600 hover:bg-blue-700"
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-full"
                     >
-                      <PlaySquare className="h-4 w-4 mr-2" />
-                      Summarize
-                    </Button>
+                      <Button 
+                        onClick={() => summarizeVideo()}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all duration-300"
+                      >
+                        <PlaySquare className="h-4 w-4 mr-2" />
+                        Summarize Video
+                      </Button>
+                    </motion.div>
                   </CardFooter>
                 )}
               </Card>
             </motion.div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-12 border rounded-lg border-dashed bg-slate-50 dark:bg-slate-800/20">
-              <Youtube className="h-16 w-16 text-slate-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">No Video Selected</h3>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="h-full flex flex-col items-center justify-center text-center p-12 border rounded-lg border-dashed bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/10 dark:to-violet-900/10"
+            >
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [0, 5, 0, -5, 0]
+                }}
+                transition={{ 
+                  duration: 5,
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                <Video className="h-20 w-20 text-indigo-400 mb-6" />
+              </motion.div>
+              <h3 className="text-xl font-medium mb-2 text-indigo-600 dark:text-indigo-400">No Video Selected</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Select a video from the list to view and get an AI-generated summary of its content.
+                {videos.length > 0 ? typingText : "Search for videos or get recommendations based on your recent activities."}
               </p>
-            </div>
+              {videos.length > 0 && (
+                <motion.div
+                  className="mt-8 text-sm text-indigo-500 font-medium"
+                  animate={{ x: [0, 10, 0] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  ← Select a video from the list
+                </motion.div>
+              )}
+            </motion.div>
           )}
         </div>
       </div>

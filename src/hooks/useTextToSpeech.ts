@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface TextToSpeechOptions {
   rate?: number;
@@ -15,7 +15,7 @@ export function useTextToSpeech(defaultOptions: TextToSpeechOptions = {}) {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   // Load voices when available
-  useState(() => {
+  useEffect(() => {
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
       if (availableVoices.length > 0) {
@@ -29,7 +29,12 @@ export function useTextToSpeech(defaultOptions: TextToSpeechOptions = {}) {
     if ('onvoiceschanged' in window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
-  });
+    
+    return () => {
+      // Cleanup on unmount
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
   const speak = useCallback((text: string, options: TextToSpeechOptions = {}) => {
     if (!window.speechSynthesis) {
