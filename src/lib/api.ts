@@ -105,7 +105,8 @@ export const analyzeMedicalImage = async (file: File, promptText: string, concis
 export const askHealthQuestion = async (question: string, concise: boolean = false) => {
   try {
     const model = getModelBasedOnPreference();
-    const prompt = `As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice.\n\nQuestion: ${question}`;
+    const prompt = `
+    As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. Remember to mention that this is not a substitute for professional medical advice. in addition to that when the users requests in different language other than english you should also respond in the same way!\n\nQuestion: ${question}`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();
