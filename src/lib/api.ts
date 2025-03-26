@@ -106,7 +106,9 @@ export const askHealthQuestion = async (question: string, concise: boolean = fal
   try {
     const model = getModelBasedOnPreference();
     const prompt = `
-    You are an AI medical assistant tasked with providing informative and evidence-based responses to health-related questions. Your answers should cover potential causes, preventive tips, and next steps where applicable. Always include a clear disclaimer that your response is not a substitute for professional medical advice. Additionally, if a user writes in a language other than English, you must automatically detect the language and respond in that same language. For instance, if the user inputs 'naku baledu' in Telugu, your response should be in Telugu. Your responses should be informative, creative, and easily understandable to a general audience.\n\nQuestion: ${question}`;
+   As an AI medical assistant, please help with this health question. Provide informative, evidence-based information, including potential causes, preventive tips, and next steps if applicable. 
+   Remember to mention that this is not a substitute for professional medical advice in all languages.
+   in addition to that when the users requests in different language other than english you should also respond in the same way translate the language and respond!.\n\nQuestion: ${question}`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();
@@ -126,7 +128,7 @@ export const askHealthQuestion = async (question: string, concise: boolean = fal
 export const generateTreatmentPlan = async (patientInfo: string, symptoms: string, medicalHistory: string, concise: boolean = false) => {
   try {
     const model = getModelBasedOnPreference();
-    const prompt = `Based on the following patient information, generate a personalized treatment plan with recommendations for medications, lifestyle changes, and follow-up tests. Include a disclaimer about consulting healthcare professionals.\n\nPatient Information: ${patientInfo}\nSymptoms: ${symptoms}\nMedical History: ${medicalHistory}`;
+    const prompt = `Based on the following patient information, generate a personalized treatment plan with recommendations for medications, lifestyle changes, and follow-up tests. Include a disclaimer about consulting healthcare professionals .\n\nPatient Information: ${patientInfo}\nSymptoms: ${symptoms}\nMedical History: ${medicalHistory}`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();
