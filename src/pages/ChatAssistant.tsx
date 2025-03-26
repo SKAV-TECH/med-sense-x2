@@ -11,6 +11,7 @@ import LoadingIndicator from '@/components/UI/LoadingIndicator';
 import { askHealthQuestion } from '@/lib/api';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import ConciseToggle from '@/components/UI/ConciseToggle';
 
 // Add WebSpeech API TypeScript declarations
 declare global {
@@ -18,6 +19,11 @@ declare global {
     SpeechRecognition: typeof SpeechRecognition;
     webkitSpeechRecognition: typeof SpeechRecognition;
   }
+}
+
+// Add proper type for SpeechRecognitionError
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
 }
 
 interface Message {
@@ -37,6 +43,7 @@ const ChatAssistant: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isConcise, setIsConcise] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { addActivity } = useApp();
@@ -59,7 +66,7 @@ const ChatAssistant: React.FC = () => {
       setIsListening(false);
     };
     
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
       toast({
@@ -88,8 +95,27 @@ const ChatAssistant: React.FC = () => {
     }
   };
   
+  const handleToggleConcise = (value: boolean) => {
+    setIsConcise(value);
+  };
+  
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
+    
+    // Check if the query is medical-related
+    const nonMedicalKeywords = ['math', 'recipe', 'cooking', 'calcul', 'solve', 'politics', 'sports'];
+    const isMedicalQuery = !nonMedicalKeywords.some(keyword => 
+      input.toLowerCase().includes(keyword)
+    );
+    
+    if (!isMedicalQuery) {
+      toast({
+        title: 'Non-medical query detected',
+        description: 'I can only answer medical-related questions. Please ask me about health, symptoms, or medical conditions.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     const userMessage: Message = {
       text: input,
@@ -102,7 +128,7 @@ const ChatAssistant: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const response = await askHealthQuestion(input);
+      const response = await askHealthQuestion(input, isConcise);
       
       const aiMessage: Message = {
         text: response,
@@ -169,6 +195,12 @@ const ChatAssistant: React.FC = () => {
               </div>
               
               <div className="border-t p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-sm text-muted-foreground">
+                    Ask me about medical topics only
+                  </div>
+                  <ConciseToggle isConcise={isConcise} onChange={handleToggleConcise} />
+                </div>
                 <div className="flex items-center gap-2">
                   <Input
                     value={input}
