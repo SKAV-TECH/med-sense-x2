@@ -148,7 +148,7 @@ export const analyzeMedication = async (medicationName: string, patientInfo?: st
     const model = getModelBasedOnPreference();
     const patientContext = patientInfo ? `\nPatient Information: ${patientInfo}` : '';
     
-    const prompt = `Provide detailed information about this medication including uses, dosage, side effects, contraindications, and potential drug interactions. Format the response with clear sections.${patientContext}\n\nMedication: ${medicationName}`;
+    const prompt = `Provide detailed information about this medication including uses, dosage, side effects, contraindications,alternative cheap medicine,generenic medicine alternatives,and potential drug interactions. Format the response with clear sections.${patientContext}\n\nMedication: ${medicationName}`;
     
     const result = await model.generateContent(prompt);
     const detailedResponse = result.response.text();
